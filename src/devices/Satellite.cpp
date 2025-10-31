@@ -32,6 +32,7 @@ bool Satellite::onReceive(byte donnees[], size_t length) {
         INFOS_ZONES_TRAME trame;
         memcpy(&trame, donnees, sizeof(trame));
         DBG_PRINTF("Température extérieure : %f\n", trame.temperatureExterieure.toFloat()); // Test température extérieure
+        mqtt->publish(MQTT_TEMP_EXTERIEURE,trame.temperatureExterieure.toFloat());
 
         if(this->getIdZone() == ID_ZONE_1) {
             this->setTemperatureConsigne(trame.temperatureConsigne1.toFloat());
