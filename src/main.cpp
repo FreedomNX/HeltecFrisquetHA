@@ -405,6 +405,9 @@ void onReceiveRadio() {
           if (donnees[0] == ID_ZONE_1 && donnees[1] == ID_CHAUDIERE && donnees[2] == satelliteZ1AssociationId) { 
             if(satelliteZ1->onReceive(&donnees[4], len-4)) {
               satelliteZ1->setRollingCode(donnees[3]);
+              mqtt->publish(MQTT_TEMP_AMBIANTE1, satelliteZ1->getTemperatureAmbiance());
+              mqtt->publish(MQTT_TEMP_CONSIGNE1, satelliteZ1->getTemperatureConsigne());
+
             }
           }
         }
