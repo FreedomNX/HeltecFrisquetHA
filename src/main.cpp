@@ -255,7 +255,8 @@ void onReceiveMQTT(String topic, byte *payload, unsigned int length) {
     }
     #endif
     
-    if (topic == MQTT_HA_STATUS) {
+    if (topic == MQTT_HA_STATUS && message.equalsIgnoreCase("online")) {
+      mqtt->connectTopics();
       mqtt->publish(MQTT_TEMP_EXTERIEURE, connect->getTemperatureExterieure());
       mqtt->publish(MQTT_TEMP_CDC, connect->getTemperatureCDC());
       mqtt->publish(MQTT_TEMP_ECS, connect->getTemperatureECS());
@@ -294,7 +295,7 @@ void onReceiveMQTT(String topic, byte *payload, unsigned int length) {
       }
     }
   }
-  if(topic == MQTT_ASS_CON_SET) {
+  if(topic == MQTT_ASS_CON_SET && message.equalsIgnoreCase("ON")) {
     ASSOCIATION_INFOS association = Connect::associer(radio);
     if(! association.networkId.isBroadcast()) {
       networkId = association.networkId;
@@ -316,7 +317,7 @@ void onReceiveMQTT(String topic, byte *payload, unsigned int length) {
     if(topic == MQTT_TEMPERATURE_EXTERIEURE_SET) {
       temperatureExterieure = message.toFloat();
       temperatureExterieureAvailable = true;
-    } else if(topic == MQTT_ASS_SON_SET) {
+    } else if(topic == MQTT_ASS_SON_SET && message.equalsIgnoreCase("ON")) {
     ASSOCIATION_INFOS association = SondeExterieure::associer(radio);
     if(! association.networkId.isBroadcast()) {
       networkId = association.networkId;
@@ -444,8 +445,6 @@ void setup() {
     });
     
     DBG_PRINTLN("NetworkID : " + byteArrayToHexString(networkId.bytes, 4));
-    DBG_PRINTLN("Connect Association ID : " + byteArrayToHexString(&frisquetConnectAssociationId, 1));
-    DBG_PRINTLN("SondeExt Association ID : " + byteArrayToHexString(&sondeExterieureAssociationId, 1));
     DBG_PRINT(F("[SX1262] Début de l'écoute radio... "));
     if(radio->startReceive() != RADIOLIB_ERR_NONE) {
         DBG_PRINT(F("Erreur lors de l'écoute."));

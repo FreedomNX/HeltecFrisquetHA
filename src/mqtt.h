@@ -65,7 +65,7 @@
 #define MQTT_TEMPERATURE_EXTERIEURE "homeassistant/sensor/frisquet/tempExterieure/set"
 #define MQTT_TEMPERATURE_EXTERIEURE_SET "homeassistant/sensor/frisquet/tempExterieure/set"
 
-#define MQTT_HA_STATUS "homeassistant/status"
+#define MQTT_HA_STATUS "homeassistant/status" //TODO Ajouter ce topic en configurable
 
 class MQTT {
     public:
