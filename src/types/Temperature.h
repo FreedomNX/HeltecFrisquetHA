@@ -67,13 +67,13 @@ struct TEMPERATURE16 {
         memcpy(this->bytes, bytes, 2);
     }
     TEMPERATURE16(float value) {
-        uint16_t intValue = static_cast<uint16_t>(round(value * 10.0f));
+        int16_t intValue = static_cast<int16_t>(round(value * 10.0f));
         this->bytes[0] = (intValue >> 8) & 0xFF;
         this->bytes[1] = intValue & 0xFF;
     }
 
     float toFloat() const {
-        uint16_t intValue = bytes[0] << 8 | bytes[1];
+        int16_t intValue = static_cast<int16_t>((bytes[0] << 8) | bytes[1]);
         return intValue / 10.0f;
     }
 
