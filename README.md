@@ -38,6 +38,7 @@ Deux modes possibles :
 - Configuration du **WiFi** et du **MQTT**
 - Visualisation des **logs**
 - Informations système et réseau
+- Envoi de trame radio personnalisée (debug)
 
 ### 🔁 Mise à jour OTA
 - Mise à jour du firmware directement via navigateur (sans câble)
@@ -60,16 +61,12 @@ Deux modes possibles :
 ### 1️⃣ Préparation du firmware
 
 Avant le flash :
-- Ouvrir le fichier **`Config.h`**  
+- Ouvrir le fichier **`DS18B20.h`**  
   et vérifier / modifier les options selon vos besoins :
 
 | Option | Description |
 |---------|-------------|
-| `USE_CONNECT` | Active l’émulation Frisquet Connect |
-| `USE_SONDE_EXTERIEURE` | Active la sonde extérieure (virtuelle ou DS18B20) |
-| `USE_DS18B20` | Active la lecture physique via DS18B20 |
 | `PIN_DS18B20` | GPIO utilisé (par défaut 33) |
-| `NETWORK_ID` / `ASSOCIATION_ID` | À renseigner si connus, sinon laisser par défaut |
 
 ---
 
@@ -83,11 +80,12 @@ Avant le flash :
 
 ### 3️⃣ Configuration via le portail web
 
-1. Se connecter au WiFi créé (ex. `Frisquet-Setup`)  
+1. Se connecter au WiFi créé (ex. `HeltecFrisquet-Setup`)  
 2. Ouvrir un navigateur sur `192.168.4.1`
 3. Renseigner :
    - Vos **informations WiFi**
    - Vos **informations MQTT**
+   - Vos **Les modules à utiliser**
 4. Sauvegarder → le module redémarre automatiquement
 
 ---
@@ -96,15 +94,15 @@ Avant le flash :
 
 #### 🔹 Module Connect
 1. Sur la chaudière : **lancer l’association Connect**  
-2. Dans Home Assistant : activer le bouton **“Associer Connect”**
+2. Sur le portail ou Home Assistant : activer le bouton **“Associer Connect”**
 3. Une fois reconnu, la chaudière commencera à envoyer les données vers le module
 
 #### 🔹 Sonde extérieure
 1. Sur la chaudière : **lancer l’association Sonde Extérieure**
-2. Dans Home Assistant : activer le bouton **“Associer Sonde Extérieure”**
+2. Sur le portail ou Home Assistant : activer le bouton **“Associer Sonde Extérieure”**
 
 Si une **DS18B20** est branchée, la température sera lue localement.
-Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), en publiant sur le topic **“"homeassistant/sensor/frisquet/tempExterieure/set"”**.
+Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), en publiant sur le topic **“"homeassistant/sensor/frisquet/sondeExterieure/temperatureExterieure/set"”**.
 
 ---
 
@@ -141,6 +139,7 @@ Projet développé pour émuler le **Frisquet Connect** avec compatibilité Home
 Projet open-source à but expérimental.  
 Utilisation à vos risques et périls — aucune affiliation avec Frisquet.  
 Mais bon, si ça marche, vous pouvez toujours m’offrir un café ☕ 😉
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/freedomnx)
 
 ---
 
@@ -148,3 +147,4 @@ Mais bon, si ça marche, vous pouvez toujours m’offrir un café ☕ 😉
 **Année :** 2025
 **Plateforme :** ESP32 (Heltec WiFi LoRa 32, SX1262)  
 **Compatibilité :** Home Assistant, MQTT, Frisquet Chaudière série Eco Radio Visio
+**Version :** 2.0.0a

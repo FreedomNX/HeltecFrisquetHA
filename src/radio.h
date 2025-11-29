@@ -1,51 +1,28 @@
-#ifndef RADIO_H
-#define RADIO_H
+#pragma once
 
 #include <heltec.h>
 #include <RadioLib.h>
-#include "conf.h"
 
-struct NetworkID {
-    NetworkID(uint8_t b0=0, uint8_t b1=0, uint8_t b2=0, uint8_t b3=0) {
-        bytes[0] = b0; bytes[1] = b1; bytes[2] = b2; bytes[3] = b3;
-    }
-
-    NetworkID(uint8_t networkId[]) {
-        memcpy(bytes, networkId, 4);
-    }
-
-    uint8_t bytes[4] = {0};
-
-    int32_t toInt32() {
-        return *((int32_t *)bytes);
-    }
-
-    bool isBroadcast() {
-        return toInt32() == 0xFFFFFFFF;
-    }
-};
+#define SS GPIO_NUM_8
+#define RST_LoRa GPIO_NUM_12
+#define BUSY_LoRa GPIO_NUM_13
+#define DIO0 GPIO_NUM_14
 
 class Radio {
 
     public:
-        Radio(NetworkID _networkId);
+        Radio();
         void init();
-        int16_t startReceive();
-        int16_t receive(uint8_t data[], size_t len);
-        int16_t readData(uint8_t data[], size_t len);
-        int16_t sendData(byte data[], size_t length);
 
-        int16_t sendFrisquetData(uint8_t idDestination, uint8_t idExpediteur, uint8_t idAssociation, uint8_t rollingCode, byte data[], size_t length);
-        
-        size_t getPacketLength();
-        void onReceive(void (*func)());
-
-        NetworkID getNetworkId();
-        void setNetworkId(NetworkID networkId);
+        int16_t startReceive() { return _radio.startReceive(); }
+        int16_t receive(uint8_t data[], size_t len) { return _radio.receive(data, len); }
+        int16_t readData(uint8_t data[], size_t len) { return _radio.readData(data, len); }
+        int16_t transmit(byte data[], size_t len) { return _radio.transmit(data, len); }
+        size_t getPacketLength() { return _radio.getPacketLength(); }
+        void onReceive(void (*func)()) { _radio.setPacketReceivedAction(func);}
+        void setSyncWord(uint8_t* syncWord, size_t len) { _radio.setSyncWord(syncWord, len); }
 
     private:
-        SX1262 radio;
-        NetworkID networkId;
+        SX1262 _radio;
 };
 
-#endif

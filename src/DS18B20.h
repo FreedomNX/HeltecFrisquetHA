@@ -4,14 +4,14 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#include "conf.h"
-
+#define DS18B20_PIN GPIO_NUM_33     // Broche du bus OneWire (DS18B20)
 
 class DS18B20 {
 
     public: 
-        DS18B20(uint8_t pin);
-        bool getTemperature(float* temperature);
+        DS18B20();
+        bool init(uint8_t pin);
+        bool getTemperature(float& temperature);
         bool isReady();
         void setOffset(uint8_t offset);
 

@@ -1,7 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
-
-#include <heltec.h>
+#include "Utils.h"
 
 String byteArrayToHexString(uint8_t *byteArray, int length) {
   String result = "";
@@ -9,9 +6,10 @@ String byteArrayToHexString(uint8_t *byteArray, int length) {
   {
     char hex[3];
     sprintf(hex, "%02X", byteArray[i]);
+    if(i > 0) {
+        result += " ";
+    }
     result += hex;
   }
   return result;
 }
-
-#endif
