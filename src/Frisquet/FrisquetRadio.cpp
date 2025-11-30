@@ -1,6 +1,6 @@
 #include "FrisquetRadio.h"
 #include "../Buffer.h"
-#include "Logs.h"
+#include "../Logs.h"
 
 bool FrisquetRadio::receivedFlag = false;
 bool FrisquetRadio::interruptReceive = false;

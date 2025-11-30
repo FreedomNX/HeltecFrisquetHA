@@ -103,7 +103,7 @@ bool Connect::envoyerZone(Zone& zone) {
     if(! estAssocie()) {
         return false;
     }
-
+    
     struct {
         temperature8 temperatureConfort;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
         temperature8 temperatureReduit;     // Début 5°C -> 0 = 50 = 5°C - MAX Confort
@@ -394,10 +394,6 @@ bool Connect::onReceive(byte* donnees, size_t length) {
                 getZone(header.idExpediteur).setTemperatureBoost(donneesZone.temperatureConfort.toFloat());
             } else {
                 getZone(header.idExpediteur).setTemperatureConfort(donneesZone.temperatureConfort.toFloat());
-            }
-
-            if(getZone1().boostActif()) {
-                info("Boost actif");
             }
 
             saveConfig();

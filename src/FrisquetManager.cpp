@@ -123,7 +123,7 @@ void FrisquetManager::onRadioReceive()
     }
 
     FrisquetRadio::RadioTrameHeader *header = (FrisquetRadio::RadioTrameHeader *)buff;
-    if (header->idDestinataire == ID_CONNECT && _cfg.useConnect())
+    if (header->idDestinataire == _connect.getId() && _cfg.useConnect())
     {
         info("[RADIO] Traitement données Connect");
         _connect.onReceive(buff, length);
