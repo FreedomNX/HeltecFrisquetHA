@@ -1,4 +1,5 @@
 #include "FrisquetDevice.h"
+#include "../Buffer.h"
 
 bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
 
@@ -16,20 +17,31 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
         if(err != RADIOLIB_ERR_NONE) {
             continue;
         }
+
         buffLength = radio().getPacketLength();
 
-        if(radioTrameHeader->idExpediteur == ID_CHAUDIERE && radioTrameHeader->type == FrisquetRadio::MessageType::ASSOCIATION) {
-            FrisquetRadio::RadioTrameHeader radioTrameHeaderAnswer;
-            radioTrameHeader->answer(radioTrameHeaderAnswer);
-            memcpy(buff, &radioTrameHeaderAnswer, sizeof(radioTrameHeaderAnswer));
+        ReadBuffer readBuffer = ReadBuffer(buff, buffLength);
+        
 
-            err = radio().transmit(buff, buffLength);
+        if(radioTrameHeader->idExpediteur == ID_CHAUDIERE && radioTrameHeader->type == FrisquetRadio::MessageType::ASSOCIATION) {
+            info("[DEVICE] Récéption trame d'association");
+
+            struct {
+                FrisquetRadio::RadioTrameHeader header;
+                NetworkID networkID;
+            } confirmPayload;
+            
+            radioTrameHeader->answer(confirmPayload.header);
+            confirmPayload.header.idExpediteur = this->getId();
+            confirmPayload.networkID = &buff[7];
+
+            err = radio().transmit((byte*)&confirmPayload, sizeof(confirmPayload));
             if (err != RADIOLIB_ERR_NONE) {
                 continue;
             }
 
             idAssociation = radioTrameHeader->idAssociation;
-            networkId = buff[6];
+            networkId = confirmPayload.networkID;
             
             radio().setNetworkID(networkId);
             return true;

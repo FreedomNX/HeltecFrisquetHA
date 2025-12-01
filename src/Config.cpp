@@ -61,6 +61,7 @@ void Config::load() {
   _preferences.end();
 
   // Migration
+  checkMigration = true;
   if(checkMigration && _preferences.begin("net-conf", true)) {
     if(_preferences.isKey("net_id")) {
       _preferences.getBytes("net_id", &_networkId, sizeof(NetworkID));
