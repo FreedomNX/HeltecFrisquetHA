@@ -30,6 +30,7 @@ class Satellite : public FrisquetDevice {
 
         MODE getMode() { return _mode; }
         void setMode(MODE mode) { _mode = mode; }
+        String getNomMode();
 
         void setTemperatureAmbiante(float temperature) { this->_temperatureAmbiante = temperature; }
         void setTemperatureConsigne(float temperature) { this->_temperatureConsigne = std::min(30.0f, std::max(5.0f, temperature)); }
@@ -71,6 +72,7 @@ class Satellite : public FrisquetDevice {
             MqttEntity temperatureConsigne;
             MqttEntity temperatureBoost;
             MqttEntity boost;
+            MqttEntity mode;
         } _mqttEntities;
         
 };

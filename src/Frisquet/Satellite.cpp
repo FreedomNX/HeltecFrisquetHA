@@ -81,6 +81,20 @@ void Satellite::begin() {
         payload.equalsIgnoreCase("ON") ? activerBoost() : desactiverBoost();
         mqtt().publishState(_mqttEntities.boost, boostActif() ? "ON" : "OFF");
     });
+
+    // SELECT: Mode zone
+    _mqttEntities.mode.id = "modeChauffageSatZ" + String(getNumeroZone());
+    _mqttEntities.mode.name = "Mode Chauffage Z" + String(getNumeroZone());
+    _mqttEntities.mode.component = "sensor";
+    _mqttEntities.mode.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"z" + String(getNumeroZone()),"mode"}), 0, true);
+    //_mqttEntities.modeZ1.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"z" + String(getNumeroZone()),"mode","set"}), 0, true);
+    _mqttEntities.mode.set("icon", "mdi:tune-variant");
+    _mqttEntities.mode.set("entity_category", "config");
+    //_mqttEntities.modeZ1.setRaw("options", R"(["Hors Gel","Réduit","Confort","Auto"])");
+    mqtt().registerEntity(*device, _mqttEntities.mode, true);
+   /* mqtt().onCommand(_mqttEntities.mode, [&](const String& payload){
+        setMode(payload);
+    });*/
 }
 
 void Satellite::loop() {
@@ -237,4 +251,23 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
     } 
 
     return false;
+}
+
+String Satellite::getNomMode() {
+    switch(this->getMode()) {
+        case MODE::CONFORT_AUTO:
+            return "Auto - Confort";
+        case MODE::REDUIT_AUTO:
+            return "Auto - Réduit";
+        case MODE::CONFORT_PERMANENT:
+            return "Confort";
+        case MODE::REDUIT_PERMANENT:
+            return "Réduit";
+        case MODE::CONFORT_DEROGATION:
+            return "Confort - Dérog";
+        case MODE::REDUIT_DEROGATION:
+            return "Réduit - Dérog";
+    }
+
+    return "Inconnu";
 }

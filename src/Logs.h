@@ -6,7 +6,7 @@
 
 class Logs {
 public:
-  explicit Logs(size_t maxLogSize = 4096) : _maxLogSize(maxLogSize) {}
+  explicit Logs(size_t maxLogSize = 500) : _maxLogSize(maxLogSize) {}
 
   struct Line {
     Line(String level, String message) : level(level), message(message) {}

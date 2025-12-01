@@ -69,7 +69,7 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
         }
         
         return true;
-    } while(retry++ < 10);
+    } while(retry++ < 1);
 
     return false;
 }
@@ -149,7 +149,8 @@ void SondeExterieure::loop() {
                 _lastEnvoiTemperatureExterieure = now;
             } else {
                 error("[SONDE EXTERIEURE] Echec de l'envoi de la température extérieure.");
-                _lastEnvoiTemperatureExterieure += 60000; // Essai dans 1 minute
+                _lastEnvoiTemperatureExterieure = now <= 60000 ? 1 : now - 60000;; // Essai dans 1 minute
+                
             }
         }
 

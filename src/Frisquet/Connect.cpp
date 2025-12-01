@@ -161,7 +161,7 @@ bool Connect::envoyerZone(Zone& zone) {
         }
         
         return true;
-    } while(retry++ < 10);
+    } while(retry++ < 1);
 
     return false;
 }
@@ -261,7 +261,7 @@ bool Connect::recupererTemperatures() {
         setTemperatureCDC(buff.temperatureCDC.toFloat());
         
         return true;
-    } while(retry++ < 10);
+    } while(retry++ < 1);
 
     return false;
 }
@@ -308,7 +308,7 @@ bool Connect::recupererConsommation() {
         setConsommationECS(buff.consommationECS.toInt16());
         
         return true;
-    } while(retry++ < 10);
+    } while(retry++ < 1);
 
     return false;
 }
@@ -1007,7 +1007,7 @@ void Connect::loop() {
                 _lastRecuperationTemperatures = now;
                 publishMqtt();
             } else {
-                _lastRecuperationTemperatures += 60000;
+                _lastRecuperationTemperatures = now <= 60000 ? 1 : now - 60000;
                 error("[CONNECT] Échec de la récupération des températures.");
             }
         }
@@ -1018,7 +1018,7 @@ void Connect::loop() {
                 _lastRecuperationConsommation = now;
                 publishMqtt();
             } else {
-                _lastRecuperationConsommation += 60000;
+                _lastRecuperationConsommation = now <= 60000 ? 1 : now - 60000;
             }
         }
 
