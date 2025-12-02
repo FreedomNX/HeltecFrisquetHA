@@ -41,7 +41,7 @@ Deux modes possibles :
 - Envoi de trame radio personnalisée (debug)
 
 ### 🔁 Mise à jour OTA
-- Mise à jour du firmware directement via navigateur (sans câble)
+- Mise à jour du firmware directement via WiFi
 
 ---
 
@@ -102,7 +102,7 @@ Avant le flash :
 2. Sur le portail ou Home Assistant : activer le bouton **“Associer Sonde Extérieure”**
 
 Si une **DS18B20** est branchée, la température sera lue localement.
-Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), en publiant sur le topic **“"homeassistant/sensor/frisquet/sondeExterieure/temperatureExterieure/set"”**.
+Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), en publiant sur le topic **“"frisquet/sondeExterieure/temperatureExterieure/set"”**. (si Base Topic est toujours par défault à "frisquet" )
 
 ---
 
