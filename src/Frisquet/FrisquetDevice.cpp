@@ -6,7 +6,6 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
     size_t buffLength = 0;
     uint16_t err;
-    FrisquetRadio::RadioTrameHeader* radioTrameHeader = (FrisquetRadio::RadioTrameHeader*)&buff;
     
     radio().setNetworkID({0xFF, 0xFF, 0xFF, 0xFF}); // Broadcast
 
@@ -18,12 +17,23 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
             continue;
         }
 
-        buffLength = radio().getPacketLength();
+        buffLength = radio().getPacketLength(); 
+        if (buffLength != 11) {
+            continue;
+        }
+
+        struct {
+            FrisquetRadio::RadioTrameHeader header;
+            uint8_t length;
+            NetworkID networkID;
+        } donnees;
+
+        logRadio(true, (byte*)buff, buffLength);
 
         ReadBuffer readBuffer = ReadBuffer(buff, buffLength);
-        logRadio(true, (byte*)buff, sizeof(buffLength));
+        readBuffer.getBytes((byte*)&donnees, sizeof(donnees));
 
-        if(radioTrameHeader->idExpediteur == ID_CHAUDIERE && radioTrameHeader->type == FrisquetRadio::MessageType::ASSOCIATION) {
+        if(donnees.header.idExpediteur == ID_CHAUDIERE && donnees.header.type == FrisquetRadio::MessageType::ASSOCIATION) {
             info("[DEVICE] Récéption trame d'association");
 
             struct {
@@ -31,19 +41,24 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
                 NetworkID networkID;
             } confirmPayload;
             
-            radioTrameHeader->answer(confirmPayload.header);
+            donnees.header.answer(confirmPayload.header);
             confirmPayload.header.idExpediteur = this->getId();
-            confirmPayload.networkID = &buff[7];
+            confirmPayload.networkID = donnees.networkID;
 
-            info("[DEVICE] Récupération du NetworkID : %s.", byteArrayToHexString((byte*)&confirmPayload.networkID, sizeof(NetworkID)).c_str());
-            info("[DEVICE] Récupération de l'association ID : %s.", byteArrayToHexString((byte*)&radioTrameHeader->idAssociation, 1).c_str());
+            info("[DEVICE] Récupération du NetworkID : %s.", byteArrayToHexString((byte*)&donnees.networkID, sizeof(NetworkID)).c_str());
+            info("[DEVICE] Récupération de l'association ID : %s.", byteArrayToHexString((byte*)&donnees.header.idAssociation, 1).c_str());
 
-            err = radio().transmit((byte*)&confirmPayload, sizeof(confirmPayload));
-            if (err != RADIOLIB_ERR_NONE) {
-                continue;
+            logRadio(false, (byte*)&confirmPayload, sizeof(confirmPayload));
+
+            for(uint8_t i = 0; i < 5; i++) {
+                err = radio().transmit((byte*)&confirmPayload, sizeof(confirmPayload));
+                if (err != RADIOLIB_ERR_NONE) {
+                    continue;
+                }
+                delay(30);
             }
 
-            idAssociation = radioTrameHeader->idAssociation;
+            idAssociation = donnees.header.idAssociation;
             networkId = confirmPayload.networkID;
             
             radio().setNetworkID(networkId);
