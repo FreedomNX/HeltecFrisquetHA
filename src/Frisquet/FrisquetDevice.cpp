@@ -21,7 +21,7 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
         buffLength = radio().getPacketLength();
 
         ReadBuffer readBuffer = ReadBuffer(buff, buffLength);
-        
+        logRadio(true, (byte*)buff, sizeof(buffLength));
 
         if(radioTrameHeader->idExpediteur == ID_CHAUDIERE && radioTrameHeader->type == FrisquetRadio::MessageType::ASSOCIATION) {
             info("[DEVICE] Récéption trame d'association");
@@ -34,6 +34,9 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
             radioTrameHeader->answer(confirmPayload.header);
             confirmPayload.header.idExpediteur = this->getId();
             confirmPayload.networkID = &buff[7];
+
+            info("[DEVICE] Récupération du NetworkID : %s.", byteArrayToHexString((byte*)&confirmPayload.networkID, sizeof(NetworkID)).c_str());
+            info("[DEVICE] Récupération de l'association ID : %s.", byteArrayToHexString((byte*)&radioTrameHeader->idAssociation, 1).c_str());
 
             err = radio().transmit((byte*)&confirmPayload, sizeof(confirmPayload));
             if (err != RADIOLIB_ERR_NONE) {
