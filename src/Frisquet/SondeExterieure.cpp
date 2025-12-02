@@ -144,16 +144,20 @@ void SondeExterieure::loop() {
                 }
             }
             
-            if(envoyerTemperatureExterieure()) {
-                publishMqtt();
-                _lastEnvoiTemperatureExterieure = now;
+            if(!isnan(getTemperatureExterieure())) {
+                if(envoyerTemperatureExterieure()) {
+                    publishMqtt();
+                    _lastEnvoiTemperatureExterieure = now;
+                } else {
+                    error("[SONDE EXTERIEURE] Echec de l'envoi de la température extérieure.");
+                    _lastEnvoiTemperatureExterieure = now <= 60000 ? 1 : now - 60000;; // Essai dans 1 minute
+                    
+                }
             } else {
-                error("[SONDE EXTERIEURE] Echec de l'envoi de la température extérieure.");
-                _lastEnvoiTemperatureExterieure = now <= 60000 ? 1 : now - 60000;; // Essai dans 1 minute
-                
+                warning("[SONDE EXTERIEURE] Aucune température disponible.");
+                _lastEnvoiTemperatureExterieure = now;
             }
         }
-
     }
 }
 
