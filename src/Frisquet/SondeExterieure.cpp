@@ -112,12 +112,16 @@ void SondeExterieure::begin() {
   // SENSOR: Température extérieure
   _mqttEntities.tempExterieure.id = "temperatureExterieureSonde";
   _mqttEntities.tempExterieure.name = "Température extérieure Sonde";
-  _mqttEntities.tempExterieure.component = "sensor";
+  _mqttEntities.tempExterieure.component = "number";
   _mqttEntities.tempExterieure.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "sondeExterieure", "temperatureExterieure"}), 0, true);
   _mqttEntities.tempExterieure.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"sondeExterieure","temperatureExterieure","set"}), 0, true);
   _mqttEntities.tempExterieure.set("device_class", "temperature");
   _mqttEntities.tempExterieure.set("state_class", "measurement");
   _mqttEntities.tempExterieure.set("unit_of_measurement", "°C");
+  _mqttEntities.tempExterieure.set("min", "-30");
+  _mqttEntities.tempExterieure.set("max", "80");
+  _mqttEntities.tempExterieure.set("mode", "box");
+  _mqttEntities.tempExterieure.set("step", "0.1");
   mqtt().registerEntity(*device, _mqttEntities.tempExterieure, true);
   mqtt().onCommand(_mqttEntities.tempExterieure, [&](const String& payload) {
         float temperature = payload.toFloat();

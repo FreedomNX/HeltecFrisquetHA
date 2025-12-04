@@ -123,7 +123,9 @@ void Portal::handleGetConfig() {
   json += "\"useSondeExt\":" +
           String(_frisquetManager.config().useSondeExterieure() ? "true" : "false") + ",";
   json += "\"useDS18B20\":" +
-          String(_frisquetManager.config().useDS18B20() ? "true" : "false");
+          String(_frisquetManager.config().useDS18B20() ? "true" : "false") + ",";
+  json += "\"useSatelliteZ1\":" +
+          String(_frisquetManager.config().useSatelliteZ1() ? "true" : "false");
 
   json += "}";
   _srv.send(200, "application/json; charset=utf-8", json);
@@ -179,6 +181,11 @@ void Portal::handlePostConfig() {
     bool cur = _frisquetManager.config().useDS18B20();
     bool v = parseBoolArg(_srv.arg("useDS18B20"), cur);
     _frisquetManager.config().useDS18B20(v);
+  }
+  if (_srv.hasArg("useSatelliteZ1")) {
+    bool cur = _frisquetManager.config().useSatelliteZ1();
+    bool v = parseBoolArg(_srv.arg("useSatelliteZ1"), cur);
+    _frisquetManager.config().useSatelliteZ1(v);
   }
 
   _frisquetManager.config().save();
@@ -321,7 +328,10 @@ void Portal::handleSendRadio() {
   hexStringToBufferRaw(hex, payload, 100, payloadLength);
 
   logRadio(false, payload, payloadLength);
+  _frisquetManager.radio().interruptReceive = true;
   _frisquetManager.radio().transmit(payload, payloadLength);
+  delay(30);
+  _frisquetManager.radio().interruptReceive = false;
 
   bool ok = true;
 
@@ -568,38 +578,52 @@ String Portal::html() {
           </div>
         </div>
 
-         <div class='card' style='background:#14171f;margin-bottom:12px'>
+
+        <div class='card' style='background:#14171f;margin-bottom:12px'>
           <h3 style='margin:0 0 8px;font-size:15px'>Frisquet</h3>
           <hr />
+          <div class='row' style='margin-bottom:10px'>
+            <label>NetworkID</label>
+            <input id='networkID' type='text' placeholder='00:00:00:00'>
+            <div class='hint'>
+              Identifiant réseau au format <code>AA:BB:CC:DD</code>.
+            </div>
+          </div>
+
           <div class='grid-3'>
             <div class='row'>
               <label class='check-row'>
                 <input id='useConnect' type='checkbox'>
                 <span>Activer Connect</span>
               </label>
-              <div class='hint'>Active la passerelle Connect.</div>
+              <div class='hint'>Active la passerelle Connect Frisquet.</div>
               <button type='button' class='btn btn-sm' id='btnPairConnect' style='margin-top:6px;display:none'>
                 Associer le Connect
               </button>
             </div>
+
             <div class='row'>
               <label class='check-row'>
                 <input id='useSondeExt' type='checkbox'>
                 <span>Activer sonde extérieure</span>
               </label>
+              <div class='hint'>Utilise la sonde extérieure radio Frisquet.</div>
               <button type='button' class='btn btn-sm' id='btnPairSondeExt' style='margin-top:6px;display:none'>
                 Associer la sonde extérieure
               </button>
-            </div>
-            <div class='row'>
               <label class='check-row'>
                 <input id='useDS18B20' type='checkbox'>
                 <span>Utiliser DS18B20</span>
               </label>
+              <div class='hint'>Capteurs de température filaires internes.</div>
             </div>
+
             <div class='row'>
-              <label>NetworkID</label>
-              <input id='networkID' type='text' placeholder='00:00:00:00'>
+              <label class='check-row' style='margin-top:8px'>
+                <input id='useSatelliteZ1' type='checkbox'>
+                <span>Satellite Z1</span>
+              </label>
+              <div class='hint'>Active la gestion du satellite Z1.</div>
             </div>
           </div>
         </div>
@@ -650,7 +674,7 @@ const FIELDS = [
   "wifiHostname","wifiSsid","wifiPass",
   "mqttHost","mqttPort","mqttUser","mqttPass",
   "mqttClientId","mqttBaseTopic",
-  "networkID","useConnect","useSondeExt","useDS18B20"
+  "networkID","useConnect","useSondeExt","useDS18B20","useSatelliteZ1"
 ];
 
 function updatePairButtons() {

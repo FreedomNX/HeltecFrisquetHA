@@ -1,7 +1,7 @@
 #include "FrisquetManager.h"
 
 FrisquetManager::FrisquetManager(FrisquetRadio &radio, Config &cfg, MqttManager &mqtt)
-    : _radio(radio), _cfg(cfg), _mqtt(mqtt), _sondeExterieure(radio, cfg, mqtt), _connect(radio, cfg, mqtt)
+    : _radio(radio), _cfg(cfg), _mqtt(mqtt), _sondeExterieure(radio, cfg, mqtt), _connect(radio, cfg, mqtt), _satelliteZ1(radio, cfg, mqtt, ID_ZONE_1)
 {
 }
 
@@ -24,6 +24,10 @@ void FrisquetManager::begin()
             initDS18B20();
         }
     }
+    if (_cfg.useSatelliteZ1()) {
+        _satelliteZ1.setModeEcrasement(true);
+        _satelliteZ1.begin();
+    }
 
     _mqtt.publishAvailability(*_mqtt.getDevice("heltecFrisquet"), true);
 
@@ -39,20 +43,20 @@ void FrisquetManager::loop()
 {
     uint32_t now = millis();
 
-    if (FrisquetRadio::receivedFlag)
-    { // Récéption données radio
+    if (FrisquetRadio::receivedFlag) { // Récéption données radio
         onRadioReceive();
-        _radio.startReceive();
     }
 
-    if (_cfg.useConnect())
-    {
+    if (_cfg.useConnect()) {
         _connect.loop();
     }
     
-    if (_cfg.useSondeExterieure())
-    {
+    if (_cfg.useSondeExterieure()) {
         _sondeExterieure.loop();
+    }
+    
+    if (_cfg.useSatelliteZ1()) {
+        _satelliteZ1.loop();
     }
 }
 
@@ -110,9 +114,10 @@ void FrisquetManager::onRadioReceive()
         return;
     }
 
-    info("[RADIO] Réception données radio");
-
     length = _radio.getPacketLength();
+    _radio.startReceive();
+
+    info("[RADIO] Réception données radio : %d bytes", length);
 
     logRadio(true, buff, length);
 
@@ -123,10 +128,12 @@ void FrisquetManager::onRadioReceive()
     }
 
     FrisquetRadio::RadioTrameHeader *header = (FrisquetRadio::RadioTrameHeader *)buff;
-    if (header->idDestinataire == _connect.getId() && _cfg.useConnect())
-    {
+    if (header->idDestinataire == _connect.getId() && _cfg.useConnect()) {
         info("[RADIO] Traitement données Connect");
         _connect.onReceive(buff, length);
+    } else if (header->idExpediteur == _satelliteZ1.getId() && _cfg.useSatelliteZ1()) {
+        info("[RADIO] Traitement données envoi Satellite Z1");
+        _satelliteZ1.onReceive(buff, length);
     }
 
     FrisquetRadio::interruptReceive = false;

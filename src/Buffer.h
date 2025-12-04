@@ -43,6 +43,17 @@ class ReadBuffer : public Buffer {
             _cursor += length;
         };
 
+        byte* getBytes(size_t length) { 
+            if(length > remainingLength()) {
+                length = remainingLength();
+            }
+
+            byte* addr = &_buff[_cursor];
+            _cursor += length;
+            
+            return addr;
+        };
+
         size_t remainingLength () {
             return _length - _cursor;
         }

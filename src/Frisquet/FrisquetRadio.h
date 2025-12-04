@@ -91,7 +91,8 @@ class FrisquetRadio : public Radio {
             uint8_t type,
             byte* donnees, 
             size_t& length,
-            uint8_t retry = 5
+            uint8_t retry = 5,
+            bool useReadData = false
         );
 
     void setNetworkID(NetworkID networkID);

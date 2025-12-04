@@ -52,6 +52,7 @@ uint16_t FrisquetRadio::sendAsk(
     } while (retry++ < 5);
 
     interruptReceive = false;
+    startReceive();
     return err;
 }
 
@@ -113,6 +114,7 @@ uint16_t FrisquetRadio::sendInit(
     } while (retry++ < 5);
 
     interruptReceive = false;
+    startReceive();
     return err;
 }
 
@@ -158,6 +160,7 @@ uint16_t FrisquetRadio::sendAnswer(
     } while (retry++ < 5);
 
     interruptReceive = false;
+    startReceive();
     return err;
 }
 
@@ -170,16 +173,21 @@ uint16_t FrisquetRadio::receiveExpected(
     uint8_t type,
     byte* donnees, 
     size_t& length,
-    uint8_t retry
+    uint8_t retry,
+    bool useReadData
 ) {
+    interruptReceive = true;
+
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
     uint16_t err;
     RadioTrameHeader radioTrameHeader;
 
-    interruptReceive = true;
-
     do {
-        err = this->receive(buff, length);
+        if(useReadData) {
+            err = this->readData(buff, length);
+        } else {
+            err = this->receive(buff, length);
+        }
 
         if(err != RADIOLIB_ERR_NONE) {
             continue;
@@ -210,6 +218,7 @@ uint16_t FrisquetRadio::receiveExpected(
 
 
     interruptReceive = false;
+    startReceive();
     return err;
 }
 

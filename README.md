@@ -102,7 +102,7 @@ Avant le flash :
 2. Sur le portail ou Home Assistant : activer le bouton **“Associer Sonde Extérieure”**
 
 Si une **DS18B20** est branchée, la température sera lue localement.
-Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), en publiant sur le topic **“"frisquet/sondeExterieure/temperatureExterieure/set"”**. (si Base Topic est toujours par défault à "frisquet" )
+Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), soit en modifiant l'entité sur HA, soit en publiant sur le topic **“"frisquet/sondeExterieure/temperatureExterieure/set"”**. (si Base Topic est toujours par défault à "frisquet" )
 
 ---
 
@@ -147,4 +147,4 @@ Mais bon, si ça marche, vous pouvez toujours m’offrir un café ☕ 😉
 **Année :** 2025  
 **Plateforme :** ESP32 (Heltec WiFi LoRa 32, SX1262)  
 **Compatibilité :** Home Assistant, MQTT, Frisquet Chaudière série Eco Radio Visio  
-**Version :** 2.0.0as
+**Version :** 2.0.0b

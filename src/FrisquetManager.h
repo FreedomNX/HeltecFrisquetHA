@@ -7,6 +7,7 @@
 #include "Frisquet/Connect.h"
 #include "Logs.h"
 #include "DS18B20.h"
+#include "Frisquet/Satellite.h"
 
 class FrisquetManager {
 public:
@@ -23,6 +24,7 @@ public:
   Config& config() { return _cfg; }
   Connect& connect() { return _connect; }
   SondeExterieure& sondeExterieure() { return _sondeExterieure; }
+  Satellite& satelliteZ1() { return _satelliteZ1; }
 
 private:
   FrisquetRadio& _radio;
@@ -31,6 +33,8 @@ private:
 
   SondeExterieure _sondeExterieure;
   Connect _connect;
+  Satellite _satelliteZ1;
+
   DS18B20* _ds18b20;
 
   void onRadioReceive();

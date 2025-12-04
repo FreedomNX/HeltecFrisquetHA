@@ -57,6 +57,7 @@ void Config::load() {
   _useConnect = _preferences.getBool("useConnect", false);
   _useSondeExterieure = _preferences.getBool("useSondeExt", false);
   _useDS18B20 = _preferences.getBool("useDS18B20", false);
+  _useSatelliteZ1 = _preferences.getBool("useSatelliteZ1", false);
 
   _preferences.end();
 
@@ -108,6 +109,7 @@ void Config::save() {
   _preferences.putBool("useConnect", _useConnect);
   _preferences.putBool("useSondeExt", _useSondeExterieure);
   _preferences.putBool("useDS18B20", _useDS18B20);
+  _preferences.putBool("useSatelliteZ1", _useSatelliteZ1);
 
   _preferences.end();
 }

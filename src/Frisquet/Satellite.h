@@ -11,14 +11,15 @@ class Satellite : public FrisquetDevice {
         enum MODE : uint8_t {
             REDUIT_PERMANENT = 0x00,
             CONFORT_PERMANENT = 0x01,
-            HORS_GEL = 0x10,
             REDUIT_DEROGATION = 0x02,
             CONFORT_DEROGATION = 0x03,
             REDUIT_AUTO = 0x04,
             CONFORT_AUTO = 0x05,
+            HORS_GEL = 0x10,
+            INCONNU = 0xFF,
         };
 
-        Satellite(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt, uint8_t idZone, bool modeEcrasement = false) : FrisquetDevice(radio, cfg, mqtt, idZone), _modeEcrasement(modeEcrasement) {}
+        Satellite(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt, uint8_t idZone) : FrisquetDevice(radio, cfg, mqtt, idZone) {}
         void loadConfig();
         void saveConfig();
 
@@ -40,8 +41,16 @@ class Satellite : public FrisquetDevice {
         bool boostActif() { return _boost; }
         void activerBoost() { _boost = true; }
         void desactiverBoost() { _boost = false; }
-        void setTemperatureBoost(float temperature) { _temperatureBoost = std::min(30.0f, std::max(5.0f, temperature)); }
+        void setTemperatureBoost(float temperature) { _temperatureBoost = std::min(5.0f, std::max(0.0f, temperature)); }
         float getTemperatureBoost() { return _temperatureBoost; }
+
+        void setModeEcrasement(bool modeEcrasement) { _modeEcrasement = modeEcrasement; }
+
+        bool confortActif();
+        bool reduitActif();
+        bool horsGelActif();
+        bool derogationActive();
+        bool autoActif();
 
         uint8_t getNumeroZone() {
             switch(this->getId()) {
@@ -60,12 +69,12 @@ class Satellite : public FrisquetDevice {
 
         float _temperatureAmbiante = NAN;
         float _temperatureConsigne = NAN;
-        MODE _mode;
+        MODE _mode = MODE::INCONNU;
 
         bool _modeEcrasement = false;
 
         bool _boost = false;
-        float _temperatureBoost = 25;
+        float _temperatureBoost = 5;
 
         struct {
             MqttEntity temperatureAmbiance;

@@ -124,7 +124,7 @@ bool Connect::envoyerZone(Zone& zone) {
     } payload;
     
     if(zone.boostActif()) {
-        payload.temperatureConfort = zone.getTemperatureBoost();
+        payload.temperatureConfort = zone.getTemperatureConfort() + zone.getTemperatureBoost();
     } else {
         payload.temperatureConfort = zone.getTemperatureConfort();
     }
@@ -346,23 +346,23 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             info("[CONNECT] Récéption trame Zone");
 
             struct {
-                    temperature8 temperatureConfort;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
-                    temperature8 temperatureReduit;     // Début 5°C -> 0 = 50 = 5°C - MAX Confort
-                    temperature8 temperatureHorsGel;     // Début 5°C -> 0 = 50 = 5°C - MAX Hors gel
-                    uint8_t mode = 0x00; 
-                    byte modeOptions = 0b00000100;
-                    byte inconnu1 = 0x00;
-                    byte dimanche[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte lundi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte mardi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte mercredi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte jeudi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte vendredi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte samedi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                } donneesZone;
+                temperature8 temperatureConfort;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+                temperature8 temperatureReduit;     // Début 5°C -> 0 = 50 = 5°C - MAX Confort
+                temperature8 temperatureHorsGel;     // Début 5°C -> 0 = 50 = 5°C - MAX Hors gel
+                uint8_t mode = 0x00; 
+                byte modeOptions = 0b00000100;
+                byte inconnu1 = 0x00;
+                byte dimanche[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                byte lundi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                byte mardi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                byte mercredi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                byte jeudi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                byte vendredi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                byte samedi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+            } donneesZone;
 
-                if(readBuffer.remainingLength() < sizeof(donneesZone)) { return false; }
-                readBuffer.getBytes((byte*)&donneesZone, sizeof(donneesZone));
+            if(readBuffer.remainingLength() < sizeof(donneesZone)) { return false; }
+            readBuffer.getBytes((byte*)&donneesZone, sizeof(donneesZone));
 
 
             getZone(header.idExpediteur).setMode((Zone::MODE_ZONE)donneesZone.mode);
@@ -370,7 +370,7 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             getZone(header.idExpediteur).setTemperatureReduit(donneesZone.temperatureReduit.toFloat());
             getZone(header.idExpediteur).setTemperatureHorsGel(donneesZone.temperatureHorsGel.toFloat());
             if(getZone(header.idExpediteur).boostActif()) {
-                getZone(header.idExpediteur).setTemperatureBoost(donneesZone.temperatureConfort.toFloat());
+                //getZone(header.idExpediteur).setTemperatureBoost(donneesZone.temperatureConfort.toFloat());
             } else {
                 getZone(header.idExpediteur).setTemperatureConfort(donneesZone.temperatureConfort.toFloat());
             }
@@ -980,7 +980,7 @@ void Connect::loop() {
     uint32_t now = millis();
 
     if(estAssocie()) {
-        if (now - _lastRecuperationTemperatures >= 120000 || _lastRecuperationTemperatures == 0) { // 2 minutes
+        if (now - _lastRecuperationTemperatures >= 300000 || _lastRecuperationTemperatures == 0) { // 5 minutes
             info("[CONNECT] Récupération des températures...");
             if(recupererTemperatures()) {
                 _lastRecuperationTemperatures = now;
@@ -1155,7 +1155,8 @@ void Connect::Zone::setTemperatureConsigne(float temperature) {
     this->_temperatureConsigne = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Connect::Zone::setTemperatureBoost(float temperature) {
-    this->_temperatureBoost = std::min(30.0f, std::max(5.0f, temperature));
+    //this->_temperatureBoost = std::min(30.0f, std::max(5.0f, temperature));
+    this->_temperatureBoost = std::min(5.0f, std::max(0.5f, temperature));
 }
 void Connect::Zone::setTemperatureDepart(float temperature) {
     this->_temperatureDepart = temperature;
