@@ -245,7 +245,10 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                     donneesSatellite->mode = MODE::CONFORT_AUTO;
                 } else if(donneesSatellite->mode == MODE::REDUIT_PERMANENT) {
                     donneesSatellite->mode = MODE::CONFORT_PERMANENT;
+                } else if(donneesSatellite->mode == MODE::HORS_GEL) {
+                    return false;
                 }
+
 
                 retry = 0;
                 lengthRx = 0;
@@ -255,7 +258,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                         this->getId(), 
                         ID_CHAUDIERE, 
                         this->getIdAssociation(),
-                        this->getIdMessage(),
+                        this->incrementIdMessage(),
                         0x01, 
                         0xA029,
                         0x0015,
@@ -272,8 +275,11 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                         continue;
                     }
                     
+                    info("[SATELLITE Z%d] Écrasement réussie.", getNumeroZone());
                     return true;
                 } while(retry++ < 5);
+
+                error("[SATELLITE Z%d] Échec de l'écrasement.", getNumeroZone());
             }
         }
     } 
