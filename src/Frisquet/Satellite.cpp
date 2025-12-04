@@ -239,6 +239,13 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 info("[SATELLITE Z%d] Écrasement de données.", getNumeroZone());
 
                 donneesSatellite->temperatureConsigne = (getTemperatureConsigne() + getTemperatureBoost());
+                if(donneesSatellite->mode == MODE::REDUIT_AUTO) {
+                    donneesSatellite->mode = MODE::CONFORT_DEROGATION;
+                } else if(donneesSatellite->mode == MODE::REDUIT_DEROGATION) {
+                    donneesSatellite->mode = MODE::CONFORT_AUTO;
+                } else if(donneesSatellite->mode == MODE::REDUIT_PERMANENT) {
+                    donneesSatellite->mode = MODE::CONFORT_PERMANENT;
+                }
 
                 retry = 0;
                 lengthRx = 0;

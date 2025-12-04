@@ -1049,10 +1049,18 @@ void Connect::publishMqtt() {
     }
 
     if( getConsommationChauffage() >= 0) {
-        mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("consommationChauffage"), getConsommationChauffage());
+        static float lastConsommationChauffage = -1;
+        if(lastConsommationChauffage != getConsommationChauffage()) {
+            lastConsommationChauffage = getConsommationChauffage();
+            mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("consommationChauffage"), getConsommationChauffage());
+        }
     }
-    if( getConsommationECS() >= 0) {
-        mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("consommationECS"), getConsommationECS());
+    if( getConsommationECS() >= 0 && getConsommationECS()) {
+        static float lastConsommationECS = -1;
+        if(lastConsommationECS != getConsommationECS()) {
+            lastConsommationECS = getConsommationECS();
+            mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("consommationECS"), getConsommationECS());
+        }
     }
 
     // Zone 1
