@@ -177,6 +177,7 @@ class Connect : public FrisquetDevice {
             MqttEntity modeZ1;
             MqttEntity modeZ2;
             MqttEntity modeZ3;
+            MqttEntity modeECS;
 
             MqttEntity tempAmbianteZ1;
             MqttEntity tempAmbianteZ2;

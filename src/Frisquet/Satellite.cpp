@@ -160,7 +160,7 @@ bool Satellite::envoyerConsigne() {
         temperature16 temperatureConsigne;
         uint8_t i1 = 0x00; 
         uint8_t mode = 0x00; // 0x01 Confort, 0x02 Reduit, etc.
-        uint8_t i2[2] = {0};
+        fword modeOptions = (uint16_t)0x0000;
     } payload;
     
     payload.temperatureAmbiante = getTemperatureAmbiante();
@@ -355,7 +355,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 error("[SATELLITE Z%d] Échec de l'écrasement.", getNumeroZone());
                 */
 
-                if(this->envoyerConsigne()) {
+                if(!this->envoyerConsigne()) {
                     error("[SATELLITE Z%d] Échec de l'écrasement.", getNumeroZone());
                 } else {
                     info("[SATELLITE Z%d] Écrasement réussie.", getNumeroZone());
