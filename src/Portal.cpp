@@ -328,10 +328,9 @@ void Portal::handleSendRadio() {
   hexStringToBufferRaw(hex, payload, 100, payloadLength);
 
   logRadio(false, payload, payloadLength);
-  _frisquetManager.radio().interruptReceive = true;
+  //_frisquetManager.radio().interruptReceive = true;
   _frisquetManager.radio().transmit(payload, payloadLength);
-  delay(30);
-  _frisquetManager.radio().interruptReceive = false;
+  //_frisquetManager.radio().interruptReceive = false;
 
   bool ok = true;
 

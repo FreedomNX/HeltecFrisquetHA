@@ -170,7 +170,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 size_t lengthRx = 0;
                 byte buffZones[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
 
-                delay(1000);
+               /* delay(1000);
 
                 err = radio().receiveExpected(
                     ID_CHAUDIERE,
@@ -217,22 +217,19 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
 
                 if(lengthRx < sizeof(donneesZones_t)) {
                     return false;
-                }
+                }*/
 
                 setIdAssociation(header->idAssociation);
                 setIdMessage(header->idMessage);
                 setMode((MODE)donneesSatellite->mode);
                 setTemperatureAmbiante(donneesSatellite->temperatureAmbiante.toFloat());
                 setTemperatureConsigne(donneesSatellite->temperatureConsigne.toFloat());
-                
-                saveConfig();
-                publishMqtt();
-
-                delay(300);
 
                 debug("[SATELLITE] Boost actif : %s.", boostActif() ? "Oui" : "Non");
                 
                 if(! boostActif() || isnan(getTemperatureBoost())) {
+                    saveConfig();
+                    publishMqtt();
                     return true;
                 }
 
@@ -250,15 +247,16 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 }
 
 
+                incrementIdMessage(3);
+
                 retry = 0;
                 lengthRx = 0;
                 do {
-                    delay(50);
                     err = this->radio().sendInit(
                         this->getId(), 
                         ID_CHAUDIERE, 
-                        this->getIdAssociation(),
-                        this->incrementIdMessage(),
+                        getIdAssociation(),
+                        incrementIdMessage(),
                         0x01, 
                         0xA029,
                         0x0015,
@@ -271,11 +269,14 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                     );
 
                     if(err != RADIOLIB_ERR_NONE) {
-                        delay(100);
+                        delay(30);
                         continue;
                     }
                     
                     info("[SATELLITE Z%d] Écrasement réussie.", getNumeroZone());
+
+                    saveConfig();
+                    publishMqtt();
                     return true;
                 } while(retry++ < 5);
 
