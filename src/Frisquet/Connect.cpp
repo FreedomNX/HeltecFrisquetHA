@@ -325,6 +325,110 @@ int16_t Connect::getConsommationECS() {
     return _consommationGazECS;
 }
 
+bool Connect::recupererModeECS() {
+    if(! estAssocie()) {
+        return false;
+    }
+
+
+    /*
+    7E 80 AA 16 05 10 A0 F0 00 0D 1A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 11 // Eco horloge
+    7E 80 AA 1A 05 10 A0 F0 00 0D 1A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 09 // Eco
+    80 7E AA 03 05 10 A0 F0 00 0D 1A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 09 // Eco
+    7E 80 AA 1D 05 10 A0 F0 00 0D 1A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 // max
+    7E 80 AA 22 05 10 A0 F0 00 0D 1A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 19 // eco+
+    */
+    // Demande récupération courte : 80 7E AA 03 01 03 A0 FC 00 01
+    struct {
+        FrisquetRadio::RadioTrameHeader header;
+        uint8_t longueurDonnees;
+        byte i1;
+        byte modeECS;
+    } buff;
+    
+
+    size_t length;
+    uint16_t err;
+
+    uint8_t retry = 0;
+    do {
+        length = sizeof(buff);
+        err = this->radio().sendAsk(
+            this->getId(), 
+            ID_CHAUDIERE, 
+            this->getIdAssociation(),
+            this->incrementIdMessage(),
+            0x01,
+            0xA0FC,
+            0x0001,
+            (byte*)&buff,
+            length
+        );
+
+        if(err != RADIOLIB_ERR_NONE) {
+            delay(100);
+            continue;
+        }
+        
+        setModeECS((MODE_ECS)buff.modeECS);
+
+        return true;
+    } while(retry++ < 1);
+
+    return false;
+}
+Connect::MODE_ECS Connect::getModeECS() {
+    return _modeECS;
+}
+bool Connect::setModeECS(MODE_ECS modeECS) {
+    _modeECS = modeECS;
+    return false;
+}
+bool Connect::envoyerModeECS() {
+    if(! estAssocie()) {
+        return false;
+    }
+    
+    struct {
+        uint8_t i1 = 0x00;
+        uint8_t modeECS = 0x00; 
+    } payload;
+    
+    payload.modeECS = getModeECS();
+    
+    byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
+    size_t length = 0;
+    uint16_t err;
+
+    uint8_t retry = 0;
+    do {
+        err = this->radio().sendInit(
+            this->getId(), 
+            ID_CHAUDIERE, 
+            this->getIdAssociation(),
+            this->incrementIdMessage(),
+            0x01, 
+            0xA0FC,
+            0x0001,
+            0xA0FC,
+            0x0001,
+            (byte*)&payload,
+            sizeof(payload),
+            buff,
+            length
+        );
+
+        if(err != RADIOLIB_ERR_NONE) {
+            delay(100);
+            continue;
+        }
+        
+        return true;
+    } while(retry++ < 1);
+
+    return false;
+}
+
 bool Connect::onReceive(byte* donnees, size_t length) {
     if(! estAssocie()) {
         return false;

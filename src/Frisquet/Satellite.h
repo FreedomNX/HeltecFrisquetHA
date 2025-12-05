@@ -27,6 +27,8 @@ class Satellite : public FrisquetDevice {
         void begin();
         void publishMqtt();
 
+        bool envoyerConsigne();
+
         bool onReceive(byte* donnees, size_t length);
 
         MODE getMode() { return _mode; }

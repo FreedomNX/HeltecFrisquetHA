@@ -46,6 +46,9 @@ void Satellite::begin() {
             info("[SATELLITE Z%d] Modification de la température de boost à %0.2f.", getNumeroZone(), temperature);
             setTemperatureBoost(temperature);
             mqtt().publishState(_mqttEntities.temperatureBoost, getTemperatureBoost());
+            if(estAssocie()) {
+                envoyerConsigne();
+            }
         }
     });
 
@@ -81,6 +84,9 @@ void Satellite::begin() {
         payload.equalsIgnoreCase("ON") ? activerBoost() : desactiverBoost();
         mqtt().publishState(_mqttEntities.boost, boostActif() ? "ON" : "OFF");
         info("[SATELLITE Z%d] Modification du boost %s.", getNumeroZone(), boostActif() ? "ON" : "OFF");
+        if(estAssocie()) {
+            envoyerConsigne();
+        }
     });
 
     // SELECT: Mode zone
@@ -142,6 +148,72 @@ bool Satellite::derogationActive() {
 }
 bool Satellite::autoActif() {
     return (_mode & 0b00000100) == 1 || derogationActive();
+}
+
+bool Satellite::envoyerConsigne() {
+    if(! estAssocie()) {
+        return false;
+    }
+    
+    struct donneesSatellite_t {
+        temperature16 temperatureAmbiante; 
+        temperature16 temperatureConsigne;
+        uint8_t i1 = 0x00; 
+        uint8_t mode = 0x00; // 0x01 Confort, 0x02 Reduit, etc.
+        uint8_t i2[2] = {0};
+    } payload;
+    
+    payload.temperatureAmbiante = getTemperatureAmbiante();
+    payload.temperatureConsigne = getTemperatureConsigne();
+    payload.mode = getMode();
+
+    if(boostActif()) {
+        payload.temperatureConsigne = getTemperatureConsigne() + getTemperatureBoost();
+        if(getMode() == MODE::REDUIT_AUTO) {
+            payload.mode = MODE::CONFORT_DEROGATION;
+        } else if(getMode() == MODE::REDUIT_DEROGATION) {
+            payload.mode = MODE::CONFORT_AUTO;
+        } else if(getMode() == MODE::REDUIT_PERMANENT) {
+            payload.mode = MODE::CONFORT_PERMANENT;
+        } else if(getMode() == MODE::HORS_GEL) {
+            return false;
+        }
+    }
+
+    
+    byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
+    size_t length = 0;
+    uint16_t err;
+
+    incrementIdMessage(3);
+
+    uint8_t retry = 0;
+    do {
+        err = this->radio().sendInit(
+            this->getId(), 
+            ID_CHAUDIERE, 
+            this->getIdAssociation(),
+            this->incrementIdMessage(),
+            0x01, 
+            0xA029,
+            0x0015,
+            0xA02F,
+            0x0004,
+            (byte*)&payload,
+            sizeof(payload),
+            buff,
+            length
+        );
+
+        if(err != RADIOLIB_ERR_NONE) {
+            delay(30);
+            continue;
+        }
+        
+        return true;
+    } while(retry++ < 1);
+
+    return false;
 }
 
 bool Satellite::onReceive(byte* donnees, size_t length) { 
@@ -235,7 +307,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
 
                 info("[SATELLITE Z%d] Écrasement de données.", getNumeroZone());
 
-                donneesSatellite->temperatureConsigne = (getTemperatureConsigne() + getTemperatureBoost());
+                /*donneesSatellite->temperatureConsigne = (getTemperatureConsigne() + getTemperatureBoost());
                 if(donneesSatellite->mode == MODE::REDUIT_AUTO) {
                     donneesSatellite->mode = MODE::CONFORT_DEROGATION;
                 } else if(donneesSatellite->mode == MODE::REDUIT_DEROGATION) {
@@ -281,6 +353,17 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 } while(retry++ < 5);
 
                 error("[SATELLITE Z%d] Échec de l'écrasement.", getNumeroZone());
+                */
+
+                if(this->envoyerConsigne()) {
+                    error("[SATELLITE Z%d] Échec de l'écrasement.", getNumeroZone());
+                } else {
+                    info("[SATELLITE Z%d] Écrasement réussie.", getNumeroZone());
+                }
+
+                saveConfig();
+                publishMqtt();
+                return true;
             }
         }
     } 

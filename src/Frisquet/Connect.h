@@ -14,10 +14,20 @@ class Connect : public FrisquetDevice {
         void begin();
         void loop();
 
+         enum MODE_ECS : uint8_t {
+                    INCONNU = 0XFF,
+                    STOP = 0x00,
+                    MAX = 0x01,
+                    ECO = 0x09,
+                    ECO_HORAIRES = 0x11,
+                    ECOPLUS = 0x19,
+                    ECOPLUS_HORAIRES = 0x19
+                };
+
         class Zone {
             public:
                 enum MODE_ZONE : uint8_t {
-                    INCONNU = 0x00,
+                    INCONNU = 0xFF,
                     AUTO = 0x05,
                     CONFORT = 0x06,
                     REDUIT = 0X07,
@@ -109,9 +119,11 @@ class Connect : public FrisquetDevice {
         }
 
         bool envoyerZone(Zone& zone);
+        bool envoyerModeECS();
         bool recupererTemperatures();
         bool recupererConsommation();
         bool recupererDate();
+        bool recupererModeECS();
 
         float getTemperatureExterieure();
         float getTemperatureECS();
@@ -119,6 +131,9 @@ class Connect : public FrisquetDevice {
 
         int16_t getConsommationECS();
         int16_t getConsommationChauffage();
+
+        MODE_ECS getModeECS();
+        bool setModeECS(MODE_ECS modeECS);
 
         bool onReceive(byte* donnees, size_t length);
 
@@ -134,6 +149,8 @@ class Connect : public FrisquetDevice {
         
         int16_t _consommationGazECS = -1;
         int16_t _consommationGazChauffage = -1;
+
+        MODE_ECS _modeECS = MODE_ECS::INCONNU;
 
         void setTemperatureExterieure(float temperature);
         void setTemperatureECS(float temperature);
