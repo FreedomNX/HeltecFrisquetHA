@@ -347,12 +347,12 @@ bool Connect::recupererModeECS() {
     } buff;
     
 
-    size_t length;
+    size_t length = 0;
     uint16_t err;
 
     uint8_t retry = 0;
     do {
-        length = sizeof(buff);
+        //length = sizeof(buff);
         err = this->radio().sendAsk(
             this->getId(), 
             ID_CHAUDIERE, 
@@ -366,7 +366,7 @@ bool Connect::recupererModeECS() {
         );
 
         if(err != RADIOLIB_ERR_NONE) {
-            delay(100);
+            delay(10);
             continue;
         }
         
@@ -380,14 +380,60 @@ bool Connect::recupererModeECS() {
 Connect::MODE_ECS Connect::getModeECS() {
     return _modeECS;
 }
+String Connect::getNomModeECS() {
+    switch(getModeECS()) {
+        case MODE_ECS::STOP:
+            return "Stop";
+            break;
+        case MODE_ECS::MAX:
+            return "Max";
+            break;
+        case MODE_ECS::ECO:
+            return "Eco";
+            break;
+        case MODE_ECS::ECO_HORAIRES:
+            return "Eco Horaires";
+            break;
+        case MODE_ECS::ECOPLUS:
+            return "Eco+";
+            break;
+        case MODE_ECS::ECOPLUS_HORAIRES:
+            return "Eco+ Horaires";
+            break;
+    }
+
+    return "Inconnu";
+}
 bool Connect::setModeECS(MODE_ECS modeECS) {
     _modeECS = modeECS;
-    return false;
+    return true;
 }
+bool Connect::setModeECS(const String& modeECS) {
+    if (modeECS.equalsIgnoreCase("Max")) {
+        this->setModeECS(MODE_ECS::MAX);
+    } else if (modeECS.equalsIgnoreCase("Eco")) {
+        this->setModeECS(MODE_ECS::ECO);
+    } else if (modeECS.equalsIgnoreCase("Eco+")) {
+        this->setModeECS(MODE_ECS::ECOPLUS);
+    } else if (modeECS.equalsIgnoreCase("Eco Horaires")) {
+        this->setModeECS(MODE_ECS::ECO_HORAIRES);
+    } else if (modeECS.equalsIgnoreCase("Eco+ Horaires")) {
+        this->setModeECS(MODE_ECS::ECOPLUS_HORAIRES);
+    } else if (modeECS.equalsIgnoreCase("Stop")) {
+        this->setModeECS(MODE_ECS::STOP);
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
 bool Connect::envoyerModeECS() {
     if(! estAssocie()) {
         return false;
     }
+
+    info("[CONNECT] Envoi du mode  ECS.");
     
     struct {
         uint8_t i1 = 0x00;
@@ -423,9 +469,11 @@ bool Connect::envoyerModeECS() {
             continue;
         }
         
+        info("[CONNECT] Envoi réussie.");
         return true;
     } while(retry++ < 1);
 
+    info("[CONNECT] Échec de l'envoi.");
     return false;
 }
 
@@ -684,6 +732,8 @@ void Connect::begin() {
         if(!isnan(temperature)) {
             info("[CONNECT] Modification de la température de boost Z1 à %0.2f.", temperature);
             getZone1().setTemperatureBoost(temperature);
+            saveConfig();
+            mqtt().publishState(_mqttEntities.tempBoostZ1, temperature);
             if(getZone1().boostActif()) {
                 _envoiZ1 = true;
                 _lastEnvoiZone = 0;
@@ -846,6 +896,8 @@ void Connect::begin() {
         if(!isnan(temperature)) {
             info("[CONNECT] Modification de la température de boost Z2 à %0.2f.", temperature);
             getZone2().setTemperatureBoost(temperature);
+            saveConfig();
+            mqtt().publishState(_mqttEntities.tempBoostZ2, temperature);
             if(getZone2().boostActif()) {
                 _envoiZ2 = true;
                 _lastEnvoiZone = 0;
@@ -1004,8 +1056,10 @@ void Connect::begin() {
     mqtt().onCommand(_mqttEntities.tempBoostZ3, [&](const String& payload) {
         float temperature = payload.toFloat();
         if(!isnan(temperature)) {
-            info("[CONNECT] Modification de la température de boost Z3 à %0.2f.", temperature);
+            info("[CONNECT] Modification de la température de boost Z1 à %0.2f.", temperature);
             getZone3().setTemperatureBoost(temperature);
+            saveConfig();
+            mqtt().publishState(_mqttEntities.tempBoostZ3, temperature);
             if(getZone3().boostActif()) {
                 _envoiZ3 = true;
                 _lastEnvoiZone = 0;
@@ -1078,6 +1132,24 @@ void Connect::begin() {
   _mqttEntities.consommationECS.set("state_class", "total_increasing");
   _mqttEntities.consommationECS.set("unit_of_measurement", "kWh");
   mqtt().registerEntity(*device, _mqttEntities.consommationECS, true);
+
+   // SELECT: Mode ECS
+    _mqttEntities.modeECS.id = "modeECS";
+    _mqttEntities.modeECS.name = "Mode ECS";
+    _mqttEntities.modeECS.component = "select";
+    _mqttEntities.modeECS.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"connect", "modeECS"}), 0, true);
+    _mqttEntities.modeECS.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"connect", "modeECS","set"}), 0, true);
+    _mqttEntities.modeECS.set("icon", "mdi:tune-variant");
+    _mqttEntities.modeECS.set("entity_category", "config");
+    _mqttEntities.modeECS.setRaw("options", R"(["Max","Eco","Eco Horaires","Eco+", "Eco+ Horaires", "Stop"])");
+    mqtt().registerEntity(*device, _mqttEntities.modeECS, true);
+    mqtt().onCommand(_mqttEntities.modeECS, [&](const String& payload){
+        info("[CONNECT] Changement du mode  ECS : %s.", payload.c_str());
+        setModeECS(payload);
+        if(envoyerModeECS()) {
+            mqtt().publishState(_mqttEntities.modeECS, getNomModeECS());
+        }
+    });
 }
 
 void Connect::loop() {
@@ -1093,6 +1165,7 @@ void Connect::loop() {
                 _lastRecuperationTemperatures = now <= 60000 ? 1 : now - 60000;
                 error("[CONNECT] Échec de la récupération des températures.");
             }
+            delay(100);
         }
 
         if (now - _lastRecuperationConsommation >= 3600000 || _lastRecuperationConsommation == 0) { // 1 heure
@@ -1103,6 +1176,18 @@ void Connect::loop() {
             } else {
                 _lastRecuperationConsommation = now <= 60000 ? 1 : now - 60000;
             }
+            delay(100);
+        }
+
+        if (now - _lastRecuperationModeECS >= 3600000 || _lastRecuperationModeECS == 0) { // 1 heure
+            info("[CONNECT] Récupération du mode ECS...");
+            if(recupererModeECS()) {
+                publishMqtt();
+            } else {
+                error("[CONNECT] Récupération impossible");
+            }
+            _lastRecuperationModeECS = now;
+            delay(100);
         }
 
         if (now - _lastEnvoiZone >= 60000 || _lastEnvoiZone == 0) { // 1 minute
@@ -1247,6 +1332,10 @@ void Connect::publishMqtt() {
     mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("boostZ3"), getZone3().boostActif() ? "ON" : "OFF");
     if(getZone3().getMode() != Zone::MODE_ZONE::INCONNU) {
         mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("modeChauffageZ3"), getZone3().getNomMode().c_str());
+    }
+
+     if(getModeECS() != MODE_ECS::INCONNU) {
+        mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("modeECS"), getNomModeECS().c_str());
     }
 }
 

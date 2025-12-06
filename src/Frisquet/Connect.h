@@ -16,12 +16,12 @@ class Connect : public FrisquetDevice {
 
          enum MODE_ECS : uint8_t {
                     INCONNU = 0XFF,
-                    STOP = 0x00,
+                    STOP = 0x29,
                     MAX = 0x01,
                     ECO = 0x09,
                     ECO_HORAIRES = 0x11,
                     ECOPLUS = 0x19,
-                    ECOPLUS_HORAIRES = 0x19
+                    ECOPLUS_HORAIRES = 0x21
                 };
 
         class Zone {
@@ -134,6 +134,8 @@ class Connect : public FrisquetDevice {
 
         MODE_ECS getModeECS();
         bool setModeECS(MODE_ECS modeECS);
+        bool setModeECS(const String& modeECS);
+        String getNomModeECS();
 
         bool onReceive(byte* donnees, size_t length);
 
@@ -166,6 +168,7 @@ class Connect : public FrisquetDevice {
         bool _envoiZ3 = false;
 
         uint32_t _lastRecuperationTemperatures = 0;
+        uint32_t _lastRecuperationModeECS = 0;
         uint32_t _lastRecuperationConsommation = 0;
         uint32_t _lastEnvoiZone = 0;
 
