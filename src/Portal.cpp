@@ -40,6 +40,35 @@ static bool parseNetworkIdFromString(const String& s, NetworkID& out) {
   return true;
 }
 
+static String jsonEscape(const String& s) {
+    String out;
+    out.reserve(s.length() + 10);
+
+    for (uint16_t i = 0; i < s.length(); i++) {
+        char c = s[i];
+
+        switch (c) {
+            case '\"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b";  break;
+            case '\f': out += "\\f";  break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:
+                if ((uint8_t)c < 0x20) {
+                    // Caractère de contrôle → tout en \u00XX
+                    char buf[7];
+                    sprintf(buf, "\\u%04X", (uint8_t)c);
+                    out += buf;
+                } else {
+                    out += c;
+                }
+        }
+    }
+    return out;
+}
+
 // Helper pour parser un bool depuis une string
 static bool parseBoolArg(const String& s, bool defaultVal) {
   String v = s;
@@ -104,19 +133,19 @@ void Portal::handleGetConfig() {
   auto& m = _frisquetManager.config().getMQTTOptions();
 
   String json = "{";
-  json += "\"wifiHostname\":\"" + String(w.hostname) + "\",";
-  json += "\"wifiSsid\":\"" + String(w.ssid) + "\",";
-  json += "\"wifiPass\":\"" + String(w.password) + "\",";
-  json += "\"mqttHost\":\"" + String(m.host) + "\",";
-  json += "\"mqttPort\":" + String(m.port) + ",";
-  json += "\"mqttUser\":\"" + String(m.username) + "\",";
-  json += "\"mqttPass\":\"" + String(m.password) + "\",";
-  json += "\"mqttClientId\":\"" + String(m.clientId) + "\",";
-  json += "\"mqttBaseTopic\":\"" + String(m.baseTopic) + "\",";
+  json += "\"wifiHostname\":\"" + jsonEscape(String(w.hostname)) + "\",";
+  json += "\"wifiSsid\":\"" + jsonEscape(String(w.ssid)) + "\",";
+  json += "\"wifiPass\":\"" + jsonEscape(String(w.password)) + "\",";
+  json += "\"mqttHost\":\"" + jsonEscape(String(m.host)) + "\",";
+  json += "\"mqttPort\":" + jsonEscape(String(m.port)) + ",";
+  json += "\"mqttUser\":\"" + jsonEscape(String(m.username)) + "\",";
+  json += "\"mqttPass\":\"" + jsonEscape(String(m.password)) + "\",";
+  json += "\"mqttClientId\":\"" + jsonEscape(String(m.clientId)) + "\",";
+  json += "\"mqttBaseTopic\":\"" + jsonEscape(String(m.baseTopic)) + "\",";
 
   // --- Frisquet ---
   const NetworkID& nid = _frisquetManager.config().getNetworkID(); // adapte le nom si besoin
-  json += "\"networkID\":\"" + networkIdToStr(nid) + "\",";
+  json += "\"networkID\":\"" + jsonEscape(networkIdToStr(nid)) + "\",";
 
   json += "\"useConnect\":" +
           String(_frisquetManager.config().useConnect() ? "true" : "false") + ",";
