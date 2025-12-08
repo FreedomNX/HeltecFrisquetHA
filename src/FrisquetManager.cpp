@@ -15,10 +15,12 @@ void FrisquetManager::begin()
 
     if (_cfg.useConnect()) {
         _connect.begin();
+        _connect.recupererDate();
     }
 
     if (_cfg.useSondeExterieure()) {
         _sondeExterieure.begin();
+        _sondeExterieure.recupererDate();
 
         if (_cfg.useDS18B20()) {
             initDS18B20();

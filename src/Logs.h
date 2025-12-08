@@ -15,7 +15,7 @@ public:
     String toString() {
       char buffer[256];
       char date[20];
-      strftime (buffer, 20, "%Y-%m-%d %H:%M:%S", localtime(&time));
+      strftime (date, 20, "%Y-%m-%d %H:%M:%S", localtime(&time));
       snprintf(buffer, sizeof(buffer), "[%s][%s] %s", level.c_str(), date, message.c_str());
       return String(buffer);
     }

@@ -50,7 +50,7 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
         uint8_t jour;
     } donnees;
 
-    size_t length = 0;
+    size_t length;
     uint16_t err;
     
     uint8_t retry = 0;
@@ -72,12 +72,12 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
             length
         );
 
-        if(err != RADIOLIB_ERR_NONE) {
+        if(err != RADIOLIB_ERR_NONE || length < sizeof(donnees)) {
             delay(100);
             continue;
         }
 
-        Date date = donnees.date;
+        Date date = Date(donnees.date);
         setDate(date);
         
         return true;

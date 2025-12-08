@@ -104,10 +104,7 @@ uint16_t FrisquetRadio::sendInit(
             continue;
         }
         
-        byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
-        size_t length = 0;
-
-        err = this->receiveExpected(idDestinataire, idExpediteur, idAssociation, idMessage, idReception|0x80, FrisquetRadio::MessageType::INIT, buff, length);
+        err = this->receiveExpected(idDestinataire, idExpediteur, idAssociation, idMessage, idReception|0x80, FrisquetRadio::MessageType::INIT, donneesReception, length);
         if(err == RADIOLIB_ERR_NONE) {
             break;
         }
@@ -184,9 +181,9 @@ uint16_t FrisquetRadio::receiveExpected(
 
     do {
         if(useReadData) {
-            err = this->readData(buff, length);
+            err = this->readData(buff, 0);
         } else {
-            err = this->receive(buff, length);
+            err = this->receive(buff, 0);
         }
 
         if(err != RADIOLIB_ERR_NONE) {
@@ -208,8 +205,10 @@ uint16_t FrisquetRadio::receiveExpected(
             radioTrameHeader.idReception ==  idReception &&
             radioTrameHeader.type ==  type
         ) {
-            length = len;
-            memcpy(donnees, buff, len);
+            if(length == 0 || len < length) {
+                length = len;   
+            }
+            memcpy(donnees, buff, length);
             break;
         } else {
             err = RADIOLIB_ERR_RX_TIMEOUT;

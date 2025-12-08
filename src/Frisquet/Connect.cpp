@@ -1342,15 +1342,15 @@ void Connect::publishMqtt() {
 
 // ====== Zone ========
 void Connect::Zone::setTemperatureConfort(float temperature) {
-    temperature = round(temperature * 2.0f) / 2.0f;
+    temperature = round(temperature * 2) / 2.0f;
     this->_temperatureConfort = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Connect::Zone::setTemperatureReduit(float temperature) {
-    temperature = round(temperature * 2.0f) / 2.0f;
+    temperature = round(temperature * 2) / 2.0f;
     this->_temperatureReduit = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Connect::Zone::setTemperatureHorsGel(float temperature) {
-    temperature = round(temperature * 2.0f) / 2.0f;
+    temperature = round(temperature * 2) / 2.0f;
     this->_temperatureHorsGel = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Connect::Zone::setTemperatureAmbiante(float temperature) {
@@ -1360,7 +1360,7 @@ void Connect::Zone::setTemperatureConsigne(float temperature) {
     this->_temperatureConsigne = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Connect::Zone::setTemperatureBoost(float temperature) {
-    temperature = round(temperature * 2.0f) / 2.0f;
+    temperature = round(temperature * 2) / 2.0f;
     //this->_temperatureBoost = std::min(30.0f, std::max(5.0f, temperature));
     this->_temperatureBoost = std::min(5.0f, std::max(0.5f, temperature));
 }

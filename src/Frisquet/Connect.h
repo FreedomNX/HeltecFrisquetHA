@@ -122,7 +122,6 @@ class Connect : public FrisquetDevice {
         bool envoyerModeECS();
         bool recupererTemperatures();
         bool recupererConsommation();
-        bool recupererDate();
         bool recupererModeECS();
 
         float getTemperatureExterieure();

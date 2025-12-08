@@ -85,7 +85,7 @@ bool FrisquetDevice::recupererDate() {
 
     uint8_t retry = 0;
     do {
-        length = sizeof(donnees);
+        length = 0;
         err = this->radio().sendAsk(
             this->getId(), 
             ID_CHAUDIERE, 
@@ -98,7 +98,7 @@ bool FrisquetDevice::recupererDate() {
             length
         );
 
-        if(err != RADIOLIB_ERR_NONE) {
+        if(err != RADIOLIB_ERR_NONE || length < sizeof(donnees)) {
             delay(100);
             continue;
         }

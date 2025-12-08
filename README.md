@@ -13,6 +13,7 @@ de récupérer les informations en temps réel et de les exposer à **Home Assis
   - Température **ECS (eau chaude sanitaire)**
   - Température **corps de chauffe (CDC)**
   - **Consommation gaz** ECS et chauffage (veille)
+  - **Affichage et séléction du mode ECS** (Max, Eco, Eco Horaires Eco+, Eco+ Horaires, Stop)
 - Gestion des **zones 1, 2 et 3** :
   - Température **départ eau**
   - Température **consigne**
