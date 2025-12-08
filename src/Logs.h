@@ -3,22 +3,26 @@
 #include <heltec.h>
 #include <map>
 #include <vector>
+#include <TimeLib.h>
 
 class Logs {
 public:
   explicit Logs(size_t maxLogSize = 500) : _maxLogSize(maxLogSize) {}
 
   struct Line {
-    Line(String level, String message) : level(level), message(message) {}
+    Line(String level, String message) : level(level), message(message), time(now()) {}
     
     String toString() {
       char buffer[256];
-      snprintf(buffer, sizeof(buffer), "[%s] %s", level.c_str(), message.c_str());
+      char date[20];
+      strftime (buffer, 20, "%Y-%m-%d %H:%M:%S", localtime(&time));
+      snprintf(buffer, sizeof(buffer), "[%s][%s] %s", level.c_str(), date, message.c_str());
       return String(buffer);
     }
 
     String level;
     String message;
+    time_t time;
   };
 
   void clear() { _logs.clear(); }

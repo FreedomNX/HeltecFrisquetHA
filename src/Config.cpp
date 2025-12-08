@@ -16,7 +16,7 @@ void Config::load() {
 
   bool checkMigration = false;
 
-  if(!_preferences.begin("sysconfig", /*readOnly=*/true)) {
+  if(!_preferences.begin("sysconfig", false)) {
     error("[CONFIG] Impossible de charger la configuration.");
   }
 
@@ -60,6 +60,7 @@ void Config::load() {
   _useSatelliteZ1 = _preferences.getBool("useSatelliteZ1", false);
 
   _preferences.end();
+  delay(100);
 
   // Migration
   checkMigration = true;
@@ -73,7 +74,7 @@ void Config::load() {
 }
 
 void Config::save() {
-  if(!_preferences.begin("sysconfig", /*readOnly=*/false)) {
+  if(!_preferences.begin("sysconfig", false)) {
     error("[CONFIG] Impossible de sauvegarder la configuration.");
   }
 

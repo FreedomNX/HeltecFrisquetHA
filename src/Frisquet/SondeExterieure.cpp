@@ -3,7 +3,7 @@
 
 void SondeExterieure::loadConfig() {
     bool checkMigration = false;
-    getPreferences().begin("sondeExtCfg", true);
+    getPreferences().begin("sondeExtCfg", false);
     
     if(! getPreferences().isKey("idAssociation")) {
         checkMigration = true;
@@ -11,6 +11,7 @@ void SondeExterieure::loadConfig() {
 
     setIdAssociation(getPreferences().getUChar("idAssociation", 0xFF));
     getPreferences().end();
+    delay(100);
 
     // Migration
     if(checkMigration && getPreferences().begin("net-conf", false)) {
@@ -41,12 +42,20 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
         return false;
     }
 
-    byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
+    struct {
+        FrisquetRadio::RadioTrameHeader header;
+        uint8_t longueur;
+        byte date[6] = {0};
+        uint8_t i1;
+        uint8_t jour;
+    } donnees;
+
     size_t length = 0;
     uint16_t err;
     
     uint8_t retry = 0;
     do {
+        length = sizeof(donnees);
         err = this->radio().sendInit(
             this->getId(), 
             ID_CHAUDIERE, 
@@ -59,7 +68,7 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
             0x0001,
             temperature16(_temperatureExterieure).bytes,
             sizeof(temperature16),
-            buff,
+            (byte*)&donnees,
             length
         );
 
@@ -67,6 +76,9 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
             delay(100);
             continue;
         }
+
+        Date date = donnees.date;
+        setDate(date);
         
         return true;
     } while(retry++ < 1);

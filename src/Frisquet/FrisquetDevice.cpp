@@ -74,23 +74,27 @@ bool FrisquetDevice::recupererDate() {
         return false;
     }
 
-    byte buff[6] = {0};
+    struct {
+        FrisquetRadio::RadioTrameHeader header;
+        uint8_t longueur;
+        byte date[6] = {0};
+    } donnees;
     
     size_t length;
     uint16_t err;
 
     uint8_t retry = 0;
     do {
-        length = sizeof(buff);
+        length = sizeof(donnees);
         err = this->radio().sendAsk(
             this->getId(), 
             ID_CHAUDIERE, 
             this->getIdAssociation(),
             this->incrementIdMessage(),
             0x01,
-            0x0A2B,
-            0x0004,
-            buff,
+            0xA02B,
+            0x0003,
+            (byte*)&donnees,
             length
         );
 
@@ -99,10 +103,12 @@ bool FrisquetDevice::recupererDate() {
             continue;
         }
 
-        _date = buff;
+        Date date = donnees.date;
+        setDate(date);
         
         return true;
     } while(retry++ < 10);
 
     return false;
 }
+

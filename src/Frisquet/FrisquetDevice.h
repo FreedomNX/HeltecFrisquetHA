@@ -6,6 +6,8 @@
 #include "../MQTT/MqttManager.h"
 #include "../Config.h"
 
+#include <TimeLib.h>
+
 #define ID_CHAUDIERE 0x80
 #define ID_ZONE_1 0x08
 #define ID_ZONE_2 0x09
@@ -20,7 +22,8 @@ class FrisquetDevice {
             return _idAssociation != 0xFF;
         }
 
-        Date& getDate() { return _date; };
+        Date& getDate() { return _date; }
+        void setDate(Date& date){ _date = date; setTime(_date.heure, _date.minute, _date.seconde, _date.jour, _date.mois, _date.annee); }
         bool recupererDate();
         
         void setIdAssociation(uint8_t idAssociation) { _idAssociation = idAssociation; };
