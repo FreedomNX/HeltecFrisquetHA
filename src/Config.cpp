@@ -58,6 +58,8 @@ void Config::load() {
   _useSondeExterieure = _preferences.getBool("useSondeExt", false);
   _useDS18B20 = _preferences.getBool("useDS18B20", false);
   _useSatelliteZ1 = _preferences.getBool("useSatelliteZ1", false);
+  _useSatelliteZ2 = _preferences.getBool("useSatelliteZ2", false);
+  _useSatelliteZ3 = _preferences.getBool("useSatelliteZ3", false);
 
   _preferences.end();
   delay(100);
@@ -111,6 +113,8 @@ void Config::save() {
   _preferences.putBool("useSondeExt", _useSondeExterieure);
   _preferences.putBool("useDS18B20", _useDS18B20);
   _preferences.putBool("useSatelliteZ1", _useSatelliteZ1);
+  _preferences.putBool("useSatelliteZ2", _useSatelliteZ2);
+  _preferences.putBool("useSatelliteZ3", _useSatelliteZ3);
 
   _preferences.end();
 }

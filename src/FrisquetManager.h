@@ -25,6 +25,8 @@ public:
   Connect& connect() { return _connect; }
   SondeExterieure& sondeExterieure() { return _sondeExterieure; }
   Satellite& satelliteZ1() { return _satelliteZ1; }
+  Satellite& satelliteZ2() { return _satelliteZ2; }
+  Satellite& satelliteZ3() { return _satelliteZ3; }
 
 private:
   FrisquetRadio& _radio;
@@ -34,6 +36,8 @@ private:
   SondeExterieure _sondeExterieure;
   Connect _connect;
   Satellite _satelliteZ1;
+  Satellite _satelliteZ2;
+  Satellite _satelliteZ3;
 
   DS18B20* _ds18b20;
 

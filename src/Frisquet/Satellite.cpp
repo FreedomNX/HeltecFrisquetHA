@@ -3,15 +3,25 @@
 #include "../Buffer.h"
 
 void Satellite::loadConfig() {
-    /*getPreferences().begin("sondeExtCfg", true);
+    getPreferences().begin((String("satCfgZ") + String(getNumeroZone())).c_str(), false);
     setIdAssociation(getPreferences().getUChar("idAssociation", 0xFF));
-    getPreferences().end();*/
+    
+    setMode((MODE)getPreferences().getUChar("mode", MODE::INCONNU));
+    setTemperatureConsigne(getPreferences().getFloat("tempConsigne", NAN));
+    setTemperatureBoost(getPreferences().getFloat("tempBoost", NAN));
+
+    getPreferences().end();
 }
 
 void Satellite::saveConfig() {   
-    /*getPreferences().begin("sondeExtCfg", false);
+    getPreferences().begin((String("satCfgZ") + String(getNumeroZone())).c_str(), false);
     getPreferences().putUChar("idAssociation", getIdAssociation());
-    getPreferences().end();*/
+
+    getPreferences().putUChar("mode", getMode());
+    getPreferences().putFloat("tempConsigne", getTemperatureConsigne());
+    getPreferences().putFloat("tempBoost", getTemperatureBoost());
+
+    getPreferences().end();
 }
 
 
@@ -94,14 +104,8 @@ void Satellite::begin() {
     _mqttEntities.mode.name = "Mode Chauffage Sat Z" + String(getNumeroZone());
     _mqttEntities.mode.component = "sensor";
     _mqttEntities.mode.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode"}), 0, true);
-    //_mqttEntities.modeZ1.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"z" + String(getNumeroZone()),"mode","set"}), 0, true);
     _mqttEntities.mode.set("icon", "mdi:tune-variant");
-    //_mqttEntities.mode.set("entity_category", "config");
-    //_mqttEntities.modeZ1.setRaw("options", R"(["Hors Gel","Réduit","Confort","Auto"])");
     mqtt().registerEntity(*device, _mqttEntities.mode, true);
-   /* mqtt().onCommand(_mqttEntities.mode, [&](const String& payload){
-        setMode(payload);
-    });*/
 }
 
 void Satellite::loop() {
@@ -330,8 +334,6 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 setMode((MODE)donneesSatellite->mode);
                 setTemperatureAmbiante(donneesSatellite->temperatureAmbiante.toFloat());
                 setTemperatureConsigne(donneesSatellite->temperatureConsigne.toFloat());
-
-                debug("[SATELLITE] Boost actif : %s.", boostActif() ? "Oui" : "Non");
                 
                 if(! boostActif() || isnan(getTemperatureBoost())) {
                     saveConfig();

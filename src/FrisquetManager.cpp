@@ -1,7 +1,8 @@
 #include "FrisquetManager.h"
 
 FrisquetManager::FrisquetManager(FrisquetRadio &radio, Config &cfg, MqttManager &mqtt)
-    : _radio(radio), _cfg(cfg), _mqtt(mqtt), _sondeExterieure(radio, cfg, mqtt), _connect(radio, cfg, mqtt), _satelliteZ1(radio, cfg, mqtt, ID_ZONE_1)
+    :   _radio(radio), _cfg(cfg), _mqtt(mqtt), _sondeExterieure(radio, cfg, mqtt), _connect(radio, cfg, mqtt),
+        _satelliteZ1(radio, cfg, mqtt, ID_ZONE_1), _satelliteZ2(radio, cfg, mqtt, ID_ZONE_2), _satelliteZ3(radio, cfg, mqtt, ID_ZONE_3)
 {
 }
 
@@ -29,6 +30,14 @@ void FrisquetManager::begin()
     if (_cfg.useSatelliteZ1()) {
         _satelliteZ1.setModeEcrasement(true);
         _satelliteZ1.begin();
+    }
+    if (_cfg.useSatelliteZ2()) {
+        _satelliteZ2.setModeEcrasement(true);
+        _satelliteZ2.begin();
+    }
+    if (_cfg.useSatelliteZ3()) {
+        _satelliteZ3.setModeEcrasement(true);
+        _satelliteZ3.begin();
     }
 
     _mqtt.publishAvailability(*_mqtt.getDevice("heltecFrisquet"), true);
@@ -136,6 +145,12 @@ void FrisquetManager::onRadioReceive()
     } else if (header->idExpediteur == _satelliteZ1.getId() && _cfg.useSatelliteZ1()) {
         info("[RADIO] Traitement données envoi Satellite Z1");
         _satelliteZ1.onReceive(buff, length);
+    } else if (header->idExpediteur == _satelliteZ2.getId() && _cfg.useSatelliteZ2()) {
+        info("[RADIO] Traitement données envoi Satellite Z2");
+        _satelliteZ2.onReceive(buff, length);
+    } else if (header->idExpediteur == _satelliteZ3.getId() && _cfg.useSatelliteZ3()) {
+        info("[RADIO] Traitement données envoi Satellite Z3");
+        _satelliteZ3.onReceive(buff, length);
     }
 
     FrisquetRadio::interruptReceive = false;

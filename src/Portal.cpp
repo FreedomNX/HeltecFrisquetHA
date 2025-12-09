@@ -499,6 +499,7 @@ String Portal::html() {
   .wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;box-shadow:0 4px 16px rgba(0,0,0,.2)}
   .row{display:flex;flex-direction:column;gap:6px}
   label{font-weight:600}
@@ -530,7 +531,7 @@ String Portal::html() {
   .msg{margin-top:10px;padding:10px;border-radius:8px;background:#111827;color:#e5e7eb;display:none}
   .msg.show{display:block}
   @media (max-width:820px){
-    .grid,.grid-3,.split{grid-template-columns:1fr}
+    .grid,.grid-3, .grid-2, .split{grid-template-columns:1fr}
   }
   .btn.btn-sm{
     padding:6px 10px;
@@ -618,40 +619,71 @@ String Portal::html() {
             </div>
           </div>
 
-          <div class='grid-3'>
+          <div class='grid-2'>
             <div class='row'>
               <label class='check-row'>
                 <input id='useConnect' type='checkbox'>
                 <span>Activer Connect</span>
+                <div class='hint'>Active la passerelle Connect Frisquet.</div>
               </label>
-              <div class='hint'>Active la passerelle Connect Frisquet.</div>
+            </div>
+
+            <div class="row">
               <button type='button' class='btn btn-sm' id='btnPairConnect' style='margin-top:6px;display:none'>
                 Associer le Connect
               </button>
             </div>
+          </div>
 
+          <div class='grid-3' style="margin-top:10px">
             <div class='row'>
               <label class='check-row'>
                 <input id='useSondeExt' type='checkbox'>
                 <span>Activer sonde extérieure</span>
               </label>
               <div class='hint'>Utilise la sonde extérieure radio Frisquet.</div>
-              <button type='button' class='btn btn-sm' id='btnPairSondeExt' style='margin-top:6px;display:none'>
-                Associer la sonde extérieure
-              </button>
+            </div>
+            <div class='row'>
               <label class='check-row'>
                 <input id='useDS18B20' type='checkbox'>
                 <span>Utiliser DS18B20</span>
               </label>
-              <div class='hint'>Capteurs de température filaires internes.</div>
+              <div class='hint'>Active l'utilisation d'un capteur de température filaire.</div>
             </div>
+            <div class='row'>
+              <button type='button' class='btn btn-sm' id='btnPairSondeExt' style='margin-top:6px;display:none'>
+                Associer la sonde extérieure
+              </button>
+            </div>
+          </div>
 
+          <hr />
+
+          <h4>Chaudières non-compatible Connect :</h4>
+
+          <div class='grid-3' style="margin-top:10px">
             <div class='row'>
               <label class='check-row' style='margin-top:8px'>
                 <input id='useSatelliteZ1' type='checkbox'>
                 <span>Satellite Z1</span>
               </label>
-              <div class='hint'>Active la gestion du satellite Z1.</div>
+              <div class='hint'>Active la gestion du satellite Z1</div>
+            </div>
+
+            <div class='row'>
+              <label class='check-row' style='margin-top:8px'>
+                <input id='useSatelliteZ2' type='checkbox'>
+                <span>Satellite Z2</span>
+              </label>
+              <div class='hint'>Active la gestion du satellite Z2.</div>
+            </div>
+
+            <div class='row'>
+              <label class='check-row' style='margin-top:8px'>
+                <input id='useSatelliteZ3' type='checkbox'>
+                <span>Satellite Z3</span>
+              </label>
+              <div class='hint'>Active la gestion du satellite Z3.</div>
             </div>
           </div>
         </div>
@@ -682,7 +714,7 @@ String Portal::html() {
       </div>
       <div class='row' style='margin-top:8px'>
         <div class='hint'>
-          Si la station se déconnecte, un point d’accès de secours peut être lancé automatiquement.
+          Si la station se déconnecte, un point d’accès de secours sera lancé automatiquement.
         </div>
       </div>
     </div>
@@ -702,7 +734,7 @@ const FIELDS = [
   "wifiHostname","wifiSsid","wifiPass",
   "mqttHost","mqttPort","mqttUser","mqttPass",
   "mqttClientId","mqttBaseTopic",
-  "networkID","useConnect","useSondeExt","useDS18B20","useSatelliteZ1"
+  "networkID","useConnect","useSondeExt","useDS18B20","useSatelliteZ1", "useSatelliteZ2", "useSatelliteZ3"
 ];
 
 function updatePairButtons() {
