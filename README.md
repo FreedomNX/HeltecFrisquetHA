@@ -28,6 +28,13 @@ Deux modes possibles :
 - Lecture **réelle** via une sonde **DS18B20**
 - Lecture **virtuelle** via **MQTT**, permettant d’utiliser la température issue de la météo via un capteur HA.
 
+### Gestion des satellites (utile si chaudière non-compatible Connect)
+- Gestion des **zones 1, 2 et 3** :
+  - Température **ambiance**
+  - Température **consigne**
+  - **Configuration d'un boost consigne** (écrasement de la consigne envoyé par le satellite)
+  - **Affichage du mode actif** (Auto, Confort, Réduit, Hors Gel)
+
 ### 🧩 Intégration Home Assistant (MQTT Discovery)
 - Découverte automatique de tous les capteurs et entités :
   - Capteurs de température, de consommation, d’état de zones
@@ -115,6 +122,8 @@ Sinon, envoyez la température via MQTT (ex. depuis un capteur météo HA), soit
 4. Home Assistant les découvre automatiquement via **MQTT Discovery**
 5. Les commandes (modes, consignes, associations) envoyées depuis HA  
    sont traduites en trames radio vers la chaudière
+6. Les infos satellites hors Connect (consigne boost) envoyées depuis HA  
+   sont traduites en trames radio vers la chaudière par écrasement (non visible sur Satellites originaux)
 
 ---
 
