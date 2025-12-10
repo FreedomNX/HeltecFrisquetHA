@@ -28,15 +28,24 @@ void FrisquetManager::begin()
         }
     }
     if (_cfg.useSatelliteZ1()) {
-        _satelliteZ1.setModeEcrasement(true);
+        if(_cfg.useSatelliteVirtualZ1()) {
+            _satelliteZ1.setModeVirtuel(true);
+            _satelliteZ1.setMode(Satellite::MODE::CONFORT_PERMANENT);
+        }
         _satelliteZ1.begin();
     }
     if (_cfg.useSatelliteZ2()) {
-        _satelliteZ2.setModeEcrasement(true);
+        if(_cfg.useSatelliteVirtualZ2()) {
+            _satelliteZ2.setModeVirtuel(true);
+            _satelliteZ2.setMode(Satellite::MODE::CONFORT_PERMANENT);
+        }
         _satelliteZ2.begin();
     }
     if (_cfg.useSatelliteZ3()) {
-        _satelliteZ3.setModeEcrasement(true);
+        if(_cfg.useSatelliteVirtualZ3()) {
+            _satelliteZ3.setModeVirtuel(true);
+            _satelliteZ3.setMode(Satellite::MODE::CONFORT_PERMANENT);
+        }
         _satelliteZ3.begin();
     }
 
@@ -142,13 +151,13 @@ void FrisquetManager::onRadioReceive()
     if (header->idDestinataire == _connect.getId() && _cfg.useConnect()) {
         info("[RADIO] Traitement données Connect");
         _connect.onReceive(buff, length);
-    } else if (header->idExpediteur == _satelliteZ1.getId() && _cfg.useSatelliteZ1()) {
+    } else if (header->idExpediteur == _satelliteZ1.getId() && _cfg.useSatelliteZ1() && !_cfg.useSatelliteVirtualZ1()) {
         info("[RADIO] Traitement données envoi Satellite Z1");
         _satelliteZ1.onReceive(buff, length);
-    } else if (header->idExpediteur == _satelliteZ2.getId() && _cfg.useSatelliteZ2()) {
+    } else if (header->idExpediteur == _satelliteZ2.getId() && _cfg.useSatelliteZ2() && !_cfg.useSatelliteVirtualZ2()) {
         info("[RADIO] Traitement données envoi Satellite Z2");
         _satelliteZ2.onReceive(buff, length);
-    } else if (header->idExpediteur == _satelliteZ3.getId() && _cfg.useSatelliteZ3()) {
+    } else if (header->idExpediteur == _satelliteZ3.getId() && _cfg.useSatelliteZ3() && !_cfg.useSatelliteVirtualZ3()) {
         info("[RADIO] Traitement données envoi Satellite Z3");
         _satelliteZ3.onReceive(buff, length);
     }

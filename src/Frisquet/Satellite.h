@@ -46,7 +46,7 @@ class Satellite : public FrisquetDevice {
         void setTemperatureBoost(float temperature) { _temperatureBoost = std::min(5.0f, std::max(0.0f, temperature)); }
         float getTemperatureBoost() { return _temperatureBoost; }
 
-        void setModeEcrasement(bool modeEcrasement) { _modeEcrasement = modeEcrasement; }
+        void setModeVirtuel(bool modeVirtuel) { _modeVirtuel = modeVirtuel; }
 
         bool confortActif();
         bool reduitActif();
@@ -73,13 +73,15 @@ class Satellite : public FrisquetDevice {
         float _temperatureConsigne = NAN;
         MODE _mode = MODE::INCONNU;
 
-        bool _modeEcrasement = false;
+        bool _modeVirtuel = false;
 
         bool _boost = false;
         float _temperatureBoost = 5;
 
+        uint32_t _lastEnvoiConsigne = 0;
+
         struct {
-            MqttEntity temperatureAmbiance;
+            MqttEntity temperatureAmbiante;
             MqttEntity temperatureConsigne;
             MqttEntity temperatureBoost;
             MqttEntity boost;

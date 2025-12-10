@@ -60,6 +60,9 @@ void Config::load() {
   _useSatelliteZ1 = _preferences.getBool("useSatelliteZ1", false);
   _useSatelliteZ2 = _preferences.getBool("useSatelliteZ2", false);
   _useSatelliteZ3 = _preferences.getBool("useSatelliteZ3", false);
+  _useSatelliteVirtualZ1 = _preferences.getBool("useSatVirtuelZ1", false);
+  _useSatelliteVirtualZ2 = _preferences.getBool("useSatVirtuelZ2", false);
+  _useSatelliteVirtualZ3 = _preferences.getBool("useSatVirtuelZ3", false);
 
   _preferences.end();
   delay(100);
@@ -115,6 +118,9 @@ void Config::save() {
   _preferences.putBool("useSatelliteZ1", _useSatelliteZ1);
   _preferences.putBool("useSatelliteZ2", _useSatelliteZ2);
   _preferences.putBool("useSatelliteZ3", _useSatelliteZ3);
+  _preferences.putBool("useSatVirtuelZ1", _useSatelliteVirtualZ1);
+  _preferences.putBool("useSatVirtuelZ2", _useSatelliteVirtualZ2);
+  _preferences.putBool("useSatVirtuelZ3", _useSatelliteVirtualZ3);
 
   _preferences.end();
 }

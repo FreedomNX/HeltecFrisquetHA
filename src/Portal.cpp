@@ -100,6 +100,10 @@ void Portal::begin(bool startApFallbackIfNoWifi) {
   _srv.on("/api/radio/send", HTTP_POST, [this]{ handleSendRadio(); });
   _srv.on("/api/connect/pair", HTTP_POST, [this]{ handlePairConnect(); });
   _srv.on("/api/sonde-ext/pair", HTTP_POST, [this]{ handlePairSondeExt(); });
+  _srv.on("/api/satellite/z1/pair", HTTP_POST, [this]{ handlePairSatelliteZ1(); });
+  _srv.on("/api/satellite/z2/pair", HTTP_POST, [this]{ handlePairSatelliteZ2(); });
+  _srv.on("/api/satellite/z3/pair", HTTP_POST, [this]{ handlePairSatelliteZ3(); });
+
 
   _srv.onNotFound([this](){
     _srv.send(404, "text/plain; charset=utf-8", "404 Non trouvé");
@@ -153,8 +157,22 @@ void Portal::handleGetConfig() {
           String(_frisquetManager.config().useSondeExterieure() ? "true" : "false") + ",";
   json += "\"useDS18B20\":" +
           String(_frisquetManager.config().useDS18B20() ? "true" : "false") + ",";
+   
+  // Satellites physiques
   json += "\"useSatelliteZ1\":" +
-          String(_frisquetManager.config().useSatelliteZ1() ? "true" : "false");
+          String(_frisquetManager.config().useSatelliteZ1() ? "true" : "false") + ",";
+  json += "\"useSatelliteZ2\":" +
+          String(_frisquetManager.config().useSatelliteZ2() ? "true" : "false") + ",";
+  json += "\"useSatelliteZ3\":" +
+          String(_frisquetManager.config().useSatelliteZ3() ? "true" : "false") + ",";
+
+  // Satellites virtuels (remplacement)
+  json += "\"useSatelliteVirtualZ1\":" +
+          String(_frisquetManager.config().useSatelliteVirtualZ1() ? "true" : "false") + ",";
+  json += "\"useSatelliteVirtualZ2\":" +
+          String(_frisquetManager.config().useSatelliteVirtualZ2() ? "true" : "false") + ",";
+  json += "\"useSatelliteVirtualZ3\":" +
+          String(_frisquetManager.config().useSatelliteVirtualZ3() ? "true" : "false");
 
   json += "}";
   _srv.send(200, "application/json; charset=utf-8", json);
@@ -211,10 +229,38 @@ void Portal::handlePostConfig() {
     bool v = parseBoolArg(_srv.arg("useDS18B20"), cur);
     _frisquetManager.config().useDS18B20(v);
   }
+
   if (_srv.hasArg("useSatelliteZ1")) {
     bool cur = _frisquetManager.config().useSatelliteZ1();
     bool v = parseBoolArg(_srv.arg("useSatelliteZ1"), cur);
     _frisquetManager.config().useSatelliteZ1(v);
+  }
+  if (_srv.hasArg("useSatelliteZ2")) {
+    bool cur = _frisquetManager.config().useSatelliteZ2();
+    bool v = parseBoolArg(_srv.arg("useSatelliteZ2"), cur);
+    _frisquetManager.config().useSatelliteZ2(v);
+  }
+  if (_srv.hasArg("useSatelliteZ3")) {
+    bool cur = _frisquetManager.config().useSatelliteZ3();
+    bool v = parseBoolArg(_srv.arg("useSatelliteZ3"), cur);
+    _frisquetManager.config().useSatelliteZ3(v);
+  }
+
+  // Satellites virtuels (remplacement du satellite physique)
+  if (_srv.hasArg("useSatelliteVirtualZ1")) {
+    bool cur = _frisquetManager.config().useSatelliteVirtualZ1();
+    bool v = parseBoolArg(_srv.arg("useSatelliteVirtualZ1"), cur);
+    _frisquetManager.config().useSatelliteVirtualZ1(v);
+  }
+  if (_srv.hasArg("useSatelliteVirtualZ2")) {
+    bool cur = _frisquetManager.config().useSatelliteVirtualZ2();
+    bool v = parseBoolArg(_srv.arg("useSatelliteVirtualZ2"), cur);
+    _frisquetManager.config().useSatelliteVirtualZ2(v);
+  }
+  if (_srv.hasArg("useSatelliteVirtualZ3")) {
+    bool cur = _frisquetManager.config().useSatelliteVirtualZ3();
+    bool v = parseBoolArg(_srv.arg("useSatelliteVirtualZ3"), cur);
+    _frisquetManager.config().useSatelliteVirtualZ3(v);
   }
 
   _frisquetManager.config().save();
@@ -425,6 +471,130 @@ void Portal::handlePairSondeExt() {
   } else {
     _srv.send(500, "application/json; charset=utf-8",
               "{\"ok\":false,\"err\":\"Échec lancement association sonde extérieure\"}");
+  }
+}
+
+void Portal::handlePairSatelliteZ1() {
+  if (_srv.method() != HTTP_POST) {
+    _srv.send(405, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Méthode non autorisée\"}");
+    return;
+  }
+
+  if (!_frisquetManager.config().useSatelliteZ1()) {
+    _srv.send(400, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Satellite Z1 désactivé dans la configuration\"}");
+    return;
+  }
+
+  info("[PORTAIL] Demande d'association du Satellite Z1");
+
+  bool ok = false;
+  NetworkID networkId;
+  uint8_t idAssociation;
+
+  // ⚠️ À ADAPTER selon ton API réelle :
+  //   satelliteZ1(), setIdAssociation(), saveConfig()...
+  if (_frisquetManager.satelliteZ1().associer(networkId, idAssociation)) {
+    _frisquetManager.satelliteZ1().setIdAssociation(idAssociation);
+    _frisquetManager.radio().setNetworkID(networkId);
+    _frisquetManager.config().setNetworkID(networkId);
+    _frisquetManager.config().save();
+    _frisquetManager.satelliteZ1().saveConfig();
+    info("[PORTAIL] Association Satellite Z1 réussie.");
+    ok = true;
+  } else {
+    error("[PORTAIL] Échec de l'association Satellite Z1.");
+  }
+
+  if (ok) {
+    _srv.send(200, "application/json; charset=utf-8",
+              "{\"ok\":true,\"msg\":\"Association Satellite Z1 lancée\"}");
+  } else {
+    _srv.send(500, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Échec lancement association Satellite Z1\"}");
+  }
+}
+
+void Portal::handlePairSatelliteZ2() {
+  if (_srv.method() != HTTP_POST) {
+    _srv.send(405, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Méthode non autorisée\"}");
+    return;
+  }
+
+  if (!_frisquetManager.config().useSatelliteZ2()) {
+    _srv.send(400, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Satellite Z2 désactivé dans la configuration\"}");
+    return;
+  }
+
+  info("[PORTAIL] Demande d'association du Satellite Z2");
+
+  bool ok = false;
+  NetworkID networkId;
+  uint8_t idAssociation;
+
+  // ⚠️ À ADAPTER selon ton API réelle :
+  if (_frisquetManager.satelliteZ2().associer(networkId, idAssociation)) {
+    _frisquetManager.satelliteZ2().setIdAssociation(idAssociation);
+    _frisquetManager.radio().setNetworkID(networkId);
+    _frisquetManager.config().setNetworkID(networkId);
+    _frisquetManager.config().save();
+    _frisquetManager.satelliteZ2().saveConfig();
+    info("[PORTAIL] Association Satellite Z2 réussie.");
+    ok = true;
+  } else {
+    error("[PORTAIL] Échec de l'association Satellite Z2.");
+  }
+
+  if (ok) {
+    _srv.send(200, "application/json; charset=utf-8",
+              "{\"ok\":true,\"msg\":\"Association Satellite Z2 lancée\"}");
+  } else {
+    _srv.send(500, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Échec lancement association Satellite Z2\"}");
+  }
+}
+
+void Portal::handlePairSatelliteZ3() {
+  if (_srv.method() != HTTP_POST) {
+    _srv.send(405, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Méthode non autorisée\"}");
+    return;
+  }
+
+  if (!_frisquetManager.config().useSatelliteZ3()) {
+    _srv.send(400, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Satellite Z3 désactivé dans la configuration\"}");
+    return;
+  }
+
+  info("[PORTAIL] Demande d'association du Satellite Z3");
+
+  bool ok = false;
+  NetworkID networkId;
+  uint8_t idAssociation;
+
+  // ⚠️ À ADAPTER selon ton API réelle :
+  if (_frisquetManager.satelliteZ3().associer(networkId, idAssociation)) {
+    _frisquetManager.satelliteZ3().setIdAssociation(idAssociation);
+    _frisquetManager.radio().setNetworkID(networkId);
+    _frisquetManager.config().setNetworkID(networkId);
+    _frisquetManager.config().save();
+    _frisquetManager.satelliteZ3().saveConfig();
+    info("[PORTAIL] Association Satellite Z3 réussie.");
+    ok = true;
+  } else {
+    error("[PORTAIL] Échec de l'association Satellite Z3.");
+  }
+
+  if (ok) {
+    _srv.send(200, "application/json; charset=utf-8",
+              "{\"ok\":true,\"msg\":\"Association Satellite Z3 lancée\"}");
+  } else {
+    _srv.send(500, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Échec lancement association Satellite Z3\"}");
   }
 }
 
@@ -639,7 +809,19 @@ String Portal::html() {
                 <input id='useSatelliteZ1' type='checkbox'>
                 <span>Satellite Z1</span>
               </label>
-              <div class='hint'>Active la gestion du satellite Z1</div>
+              <div class='hint'>Active la gestion du satellite Z1.</div>
+
+              <label class='check-row' style='margin-top:8px'>
+                <input id='useSatelliteVirtualZ1' type='checkbox'>
+                <span>Remplacer le satellite physique</span>
+              </label>
+              <div class='hint'>
+                Utilise ce module à la place d’un satellite Z1 réel (émulation).
+              </div>
+
+              <button type='button' class='btn btn-sm' id='btnPairSatZ1' style='margin-top:6px;display:none'>
+                Associer le Satellite Z1
+              </button>
             </div>
 
             <div class='row'>
@@ -648,6 +830,18 @@ String Portal::html() {
                 <span>Satellite Z2</span>
               </label>
               <div class='hint'>Active la gestion du satellite Z2.</div>
+
+              <label class='check-row' style='margin-top:8px'>
+                <input id='useSatelliteVirtualZ2' type='checkbox'>
+                <span>Remplacer le satellite physique</span>
+              </label>
+              <div class='hint'>
+                Utilise ce module à la place d’un satellite Z2 réel (émulation).
+              </div>
+
+              <button type='button' class='btn btn-sm' id='btnPairSatZ2' style='margin-top:6px;display:none'>
+                Associer le Satellite Z2
+              </button>
             </div>
 
             <div class='row'>
@@ -656,6 +850,18 @@ String Portal::html() {
                 <span>Satellite Z3</span>
               </label>
               <div class='hint'>Active la gestion du satellite Z3.</div>
+
+              <label class='check-row' style='margin-top:8px'>
+                <input id='useSatelliteVirtualZ3' type='checkbox'>
+                <span>Remplacer le satellite physique</span>
+              </label>
+              <div class='hint'>
+                Utilise ce module à la place d’un satellite Z3 réel (émulation).
+              </div>
+
+              <button type='button' class='btn btn-sm' id='btnPairSatZ3' style='margin-top:6px;display:none'>
+                Associer le Satellite Z3
+              </button>
             </div>
           </div>
         </div>
@@ -706,7 +912,9 @@ const FIELDS = [
   "wifiHostname","wifiSsid","wifiPass",
   "mqttHost","mqttPort","mqttUser","mqttPass",
   "mqttClientId","mqttBaseTopic",
-  "networkID","useConnect","useSondeExt","useDS18B20","useSatelliteZ1", "useSatelliteZ2", "useSatelliteZ3"
+  "networkID","useConnect","useSondeExt","useDS18B20",
+  "useSatelliteZ1","useSatelliteZ2","useSatelliteZ3",
+  "useSatelliteVirtualZ1","useSatelliteVirtualZ2","useSatelliteVirtualZ3"
 ];
 
 function updatePairButtons() {
@@ -721,7 +929,27 @@ function updatePairButtons() {
   if (chkSonde && btnSonde) {
     btnSonde.style.display = chkSonde.checked ? "inline-flex" : "none";
   }
+
+
+  const chkZ1 = $("#useSatelliteZ1");
+  const chkZ2 = $("#useSatelliteZ2");
+  const chkZ3 = $("#useSatelliteZ3");
+  const btnZ1 = $("#btnPairSatZ1");
+  const btnZ2 = $("#btnPairSatZ2");
+  const btnZ3 = $("#btnPairSatZ3");
+
+  if (chkZ1 && btnZ1) {
+    btnZ1.style.display = chkZ1.checked ? "inline-flex" : "none";
+  }
+  if (chkZ2 && btnZ2) {
+    btnZ2.style.display = chkZ2.checked ? "inline-flex" : "none";
+  }
+  if (chkZ3 && btnZ3) {
+    btnZ3.style.display = chkZ3.checked ? "inline-flex" : "none";
+  }
 }
+
+
 
 async function loadConfig() {
   try {
@@ -850,6 +1078,21 @@ async function pairSondeExt() {
   }
 }
 
+async function pairSatellite(zone) {
+  try {
+    msg("Lancement de l'association du Satellite " + zone + "…");
+    const r = await fetch("/api/satellite/z" + zone.toLowerCase() + "/pair", { method:"POST" });
+    const j = await r.json();
+    if (j.ok) {
+      msg(j.msg || ("Association Satellite " + zone + " lancée. Consultez les logs RADIO."));
+    } else {
+      msg("Erreur association Satellite " + zone + " : " + (j.err || "inconnue"));
+    }
+  } catch (e) {
+    msg("Erreur réseau lors de l'association Satellite " + zone + ".", false);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", ()=>{
   // Toggle password
   document.querySelectorAll('[data-toggle]').forEach(btn=>{
@@ -876,13 +1119,27 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   const chkConnect = $("#useConnect");
   const chkSonde   = $("#useSondeExt");
+  const chkZ1      = $("#useSatelliteZ1");
+  const chkZ2      = $("#useSatelliteZ2");
+  const chkZ3      = $("#useSatelliteZ3");
+
   if (chkConnect) chkConnect.addEventListener("change", updatePairButtons);
   if (chkSonde)   chkSonde.addEventListener("change", updatePairButtons);
+  if (chkZ1)      chkZ1.addEventListener("change", updatePairButtons);
+  if (chkZ2)      chkZ2.addEventListener("change", updatePairButtons);
+  if (chkZ3)      chkZ3.addEventListener("change", updatePairButtons);
 
   const btnPairConnect = $("#btnPairConnect");
   const btnPairSonde   = $("#btnPairSondeExt");
+  const btnPairSatZ1   = $("#btnPairSatZ1");
+  const btnPairSatZ2   = $("#btnPairSatZ2");
+  const btnPairSatZ3   = $("#btnPairSatZ3");
+
   if (btnPairConnect) btnPairConnect.addEventListener("click", pairConnect);
   if (btnPairSonde)   btnPairSonde.addEventListener("click", pairSondeExt);
+  if (btnPairSatZ1)   btnPairSatZ1.addEventListener("click", ()=>pairSatellite("1"));
+  if (btnPairSatZ2)   btnPairSatZ2.addEventListener("click", ()=>pairSatellite("2"));
+  if (btnPairSatZ3)   btnPairSatZ3.addEventListener("click", ()=>pairSatellite("3"));
 
   loadConfig();
   loadStatus();

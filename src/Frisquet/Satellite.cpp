@@ -6,9 +6,10 @@ void Satellite::loadConfig() {
     getPreferences().begin((String("satCfgZ") + String(getNumeroZone())).c_str(), false);
     setIdAssociation(getPreferences().getUChar("idAssociation", 0xFF));
     
-    setMode((MODE)getPreferences().getUChar("mode", MODE::INCONNU));
+    setMode((MODE)getPreferences().getUChar("mode", MODE::CONFORT_PERMANENT));
+    setTemperatureAmbiante(getPreferences().getFloat("tempAmbiante", NAN));
     setTemperatureConsigne(getPreferences().getFloat("tempConsigne", NAN));
-    setTemperatureBoost(getPreferences().getFloat("tempBoost", NAN));
+    setTemperatureBoost(getPreferences().getFloat("tempBoost", 2));
 
     getPreferences().end();
 }
@@ -18,6 +19,7 @@ void Satellite::saveConfig() {
     getPreferences().putUChar("idAssociation", getIdAssociation());
 
     getPreferences().putUChar("mode", getMode());
+    getPreferences().putFloat("tempAmbiante", getTemperatureAmbiante());
     getPreferences().putFloat("tempConsigne", getTemperatureConsigne());
     getPreferences().putFloat("tempBoost", getTemperatureBoost());
 
@@ -46,7 +48,7 @@ void Satellite::begin() {
     _mqttEntities.temperatureBoost.set("state_class", "measurement");
     _mqttEntities.temperatureBoost.set("unit_of_measurement", "°C");
     _mqttEntities.temperatureBoost.set("min", "0");
-    _mqttEntities.temperatureBoost.set("max", "30");
+    _mqttEntities.temperatureBoost.set("max", "5");
     _mqttEntities.temperatureBoost.set("mode", "box");
     _mqttEntities.temperatureBoost.set("step", "0.5");
     mqtt().registerEntity(*device, _mqttEntities.temperatureBoost, true);
@@ -62,14 +64,30 @@ void Satellite::begin() {
         }
     });
 
-    _mqttEntities.temperatureAmbiance.id = "tempAmbSatZ" + String(getNumeroZone());
-    _mqttEntities.temperatureAmbiance.name = "Température Ambiante Satellite Z" + String(getNumeroZone());
-    _mqttEntities.temperatureAmbiance.component = "sensor";
-    _mqttEntities.temperatureAmbiance.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "satellite", "z" + String(getNumeroZone()),"temperatureAmbiance"}), 0, true);
-    _mqttEntities.temperatureAmbiance.set("device_class", "temperature");
-    _mqttEntities.temperatureAmbiance.set("state_class", "measurement");
-    _mqttEntities.temperatureAmbiance.set("unit_of_measurement", "°C");
-    mqtt().registerEntity(*device, _mqttEntities.temperatureAmbiance, true);
+    _mqttEntities.temperatureAmbiante.id = "tempAmbSatZ" + String(getNumeroZone());
+    _mqttEntities.temperatureAmbiante.name = "Température Ambiante Satellite Z" + String(getNumeroZone());
+    _mqttEntities.temperatureAmbiante.component = "sensor";
+    _mqttEntities.temperatureAmbiante.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "satellite", "z" + String(getNumeroZone()),"temperatureAmbiante"}), 0, true);
+    _mqttEntities.temperatureAmbiante.set("device_class", "temperature");
+    _mqttEntities.temperatureAmbiante.set("state_class", "measurement");
+    _mqttEntities.temperatureAmbiante.set("unit_of_measurement", "°C");
+    if(_modeVirtuel) {
+        _mqttEntities.temperatureAmbiante.component = "number";
+        _mqttEntities.temperatureAmbiante.set("min", "0");
+        _mqttEntities.temperatureAmbiante.set("max", "50");
+        _mqttEntities.temperatureAmbiante.set("mode", "box");
+        _mqttEntities.temperatureAmbiante.set("step", "0.1");
+        _mqttEntities.temperatureAmbiante.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"temperatureAmbiante", "set"}), 0, true);
+        mqtt().onCommand(_mqttEntities.temperatureAmbiante, [&](const String& payload) {
+            float temperature = payload.toFloat();
+            if(!isnan(temperature)) {
+                info("[SATELLITE Z%d] Modification de la température ambiante à %0.2f.", getNumeroZone(), temperature);
+                setTemperatureAmbiante(temperature);
+                mqtt().publishState(_mqttEntities.temperatureAmbiante, getTemperatureAmbiante());
+            }
+        });
+    }
+    mqtt().registerEntity(*device, _mqttEntities.temperatureAmbiante, true);
 
 
     _mqttEntities.temperatureConsigne.id = "tempConsSatZ" + String(getNumeroZone());
@@ -79,6 +97,23 @@ void Satellite::begin() {
     _mqttEntities.temperatureConsigne.set("device_class", "temperature");
     _mqttEntities.temperatureConsigne.set("state_class", "measurement");
     _mqttEntities.temperatureConsigne.set("unit_of_measurement", "°C");
+    if(_modeVirtuel) {
+        _mqttEntities.temperatureConsigne.component = "number";
+        _mqttEntities.temperatureConsigne.set("min", "0");
+        _mqttEntities.temperatureConsigne.set("max", "50");
+        _mqttEntities.temperatureConsigne.set("mode", "box");
+        _mqttEntities.temperatureConsigne.set("step", "0.1");
+        _mqttEntities.temperatureConsigne.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"temperatureConsigne", "set"}), 0, true);
+        mqtt().onCommand(_mqttEntities.temperatureConsigne, [&](const String& payload) {
+            float temperature = payload.toFloat();
+            if(!isnan(temperature)) {
+                info("[SATELLITE Z%d] Modification de la température consigne à %0.2f.", getNumeroZone(), temperature);
+                setTemperatureConsigne(temperature);
+                mqtt().publishState(_mqttEntities.temperatureConsigne, getTemperatureConsigne());
+                envoyerConsigne();
+            }
+        });
+    }
     mqtt().registerEntity(*device, _mqttEntities.temperatureConsigne, true);
 
     // SWITCH: Activation Boost
@@ -105,7 +140,14 @@ void Satellite::begin() {
     _mqttEntities.mode.component = "sensor";
     _mqttEntities.mode.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode"}), 0, true);
     _mqttEntities.mode.set("icon", "mdi:tune-variant");
+    /*if(_modeVirtuel) {
+        _mqttEntities.mode.component = "select";
+        _mqttEntities.mode.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode","set"}), 0, true);
+        _mqttEntities.mode.setRaw("options", R"(["Confort","Réduit"])");
+        _mqttEntities.mode.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode", "set"}), 0, true);
+    }*/
     mqtt().registerEntity(*device, _mqttEntities.mode, true);
+    
 }
 
 void Satellite::loop() {
@@ -118,7 +160,20 @@ void Satellite::loop() {
 
     uint32_t now = millis();
 
-    if(estAssocie()) {
+    if(! estAssocie() || !_modeVirtuel) {
+        return;
+    }
+
+    if (now - _lastEnvoiConsigne >= 600000 || _lastEnvoiConsigne == 0) { // 10 minutes
+        info("[SATELLITE Z%d] Envoi de la consigne.", getNumeroZone());
+        if(envoyerConsigne()) {
+            incrementIdMessage(3);
+            _lastEnvoiConsigne = now;
+            publishMqtt();
+        } else {
+            error("[SATELLITE Z%d] Echec de l'envoi.", getNumeroZone());
+            _lastEnvoiConsigne = now <= 60000 ? 1 : now - 60000;
+        }
     }
 }
 
@@ -158,6 +213,10 @@ bool Satellite::envoyerConsigne() {
     if(! estAssocie()) {
         return false;
     }
+
+    if(isnan(getTemperatureAmbiante()) || isnan(getTemperatureConsigne()) || getMode() == MODE::INCONNU) {
+        return false;
+    }
     
     struct donneesSatellite_t {
         temperature16 temperatureAmbiante; 
@@ -194,7 +253,7 @@ bool Satellite::envoyerConsigne() {
     
     payload.temperatureAmbiante = getTemperatureAmbiante();
     payload.temperatureConsigne = getTemperatureConsigne();
-    payload.mode = getMode();
+    payload.mode = getMode();   
 
     if(boostActif()) {
         payload.temperatureConsigne = getTemperatureConsigne() + getTemperatureBoost();
@@ -212,8 +271,6 @@ bool Satellite::envoyerConsigne() {
     
     size_t length = 0;
     uint16_t err;
-
-    incrementIdMessage(3);
 
     uint8_t retry = 0;
     do {
@@ -254,7 +311,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
     FrisquetRadio::RadioTrameHeader* header = (FrisquetRadio::RadioTrameHeader*) readBuffer.getBytes(sizeof(FrisquetRadio::RadioTrameHeader));
 
     //info("[SATELLITE Z] Interception envoi consigne.", header->type);
-    if(_modeEcrasement) {
+    if(!_modeVirtuel) {
         if(length == 23 && header->type == FrisquetRadio::MessageType::INIT && header->idExpediteur == this->getId() && header->idMessage != getIdMessage()) { // Récéption en écoute
             FrisquetRadio::RadioTrameInit* requete = (FrisquetRadio::RadioTrameInit*) readBuffer.getBytes(sizeof(FrisquetRadio::RadioTrameInit));
             if(requete->adresseMemoireEcriture.toUInt16() == 0xA02F && requete->tailleMemoireEcriture.toUInt16() == 0x0004) { // Envoi consigne
@@ -343,6 +400,8 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
 
                 info("[SATELLITE Z%d] Écrasement de données.", getNumeroZone());
 
+                incrementIdMessage(3);
+
                 if(!this->envoyerConsigne()) {
                     error("[SATELLITE Z%d] Échec de l'écrasement.", getNumeroZone());
                 } else {
@@ -354,7 +413,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 return true;
             }
         }
-    } 
+    }
 
     return false;
 }

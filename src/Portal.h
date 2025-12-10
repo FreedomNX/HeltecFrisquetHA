@@ -38,6 +38,9 @@ private:
   void handleSendRadio();
   void handlePairConnect();
   void handlePairSondeExt();
+  void handlePairSatelliteZ1();
+  void handlePairSatelliteZ2();
+  void handlePairSatelliteZ3();
 
 
   // Utils
