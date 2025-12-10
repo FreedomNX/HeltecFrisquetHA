@@ -1,21 +1,52 @@
 #pragma once
 #include <Arduino.h>
-#include <WiFi.h>
 #include <WebServer.h>
+#include <Preferences.h>
+#include "Config.h"
+#include "Logs.h"
+#include "FrisquetManager.h"
 
-// Structure pour stocker la config (WiFi, MQTT…)
-struct Config {
-  char wifiSsid[32];
-  char wifiPass[64];
-  char mqttHost[64];
-  uint16_t mqttPort;
-  char mqttUser[32];
-  char mqttPass[64];
+// Portail Web de configuration + logs (adapté à ton Config)
+class Portal {
+public:
+  explicit Portal(FrisquetManager& frisquetManager, uint16_t port = 80);
+
+  // startApFallbackIfNoWifi = monte un AP "ESP32-Setup" si pas de Wi-Fi actif
+  void begin(bool startApFallbackIfNoWifi = false);
+  void loop();
+
+private:
+  WebServer _srv;
+  FrisquetManager& _frisquetManager;
+
+  // AP fallback
+  bool _apRunning = false;
+  String _apSsid = "HeltecFrisquet-Setup";
+  String _apPass = "frisquetconfig";
+
+  // Handlers
+  void handleIndex();            // GET /
+  void handlePing();             // GET /api/ping
+  void handleGetConfig();        // GET /api/config
+  void handlePostConfig();       // POST /api/config
+  void handleReboot();           // POST /api/reboot
+  void handleGetLogs();          // GET /api/logs
+  void handleLogsPage();         // GET /logs
+  void handleClearLogs();        // GET /logs/clear
+  void handleStatus();
+  void handleRadioLogsPage();
+  void handleSendRadio();
+  void handlePairConnect();
+  void handlePairSondeExt();
+
+
+  // Utils
+  static String html();
+  static String logsHtml();
+  String logsRadioHtml();
+  void scheduleReboot(uint32_t delayMs = 800);
+  bool hexStringToBufferRaw(const String& hex, uint8_t* buffer, size_t maxLen, size_t& outLen);
+
+  // AP
+  void startAp();
 };
-
-extern Config cfg;
-
-void portalInit();
-void portalLoop();
-bool portalIsApRunning();
-bool portalIsStaConnected();
