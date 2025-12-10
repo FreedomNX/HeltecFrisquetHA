@@ -99,10 +99,10 @@ void Satellite::begin() {
     _mqttEntities.temperatureConsigne.set("unit_of_measurement", "°C");
     if(_modeVirtuel) {
         _mqttEntities.temperatureConsigne.component = "number";
-        _mqttEntities.temperatureConsigne.set("min", "0");
-        _mqttEntities.temperatureConsigne.set("max", "50");
+        _mqttEntities.temperatureConsigne.set("min", "5");
+        _mqttEntities.temperatureConsigne.set("max", "30");
         _mqttEntities.temperatureConsigne.set("mode", "box");
-        _mqttEntities.temperatureConsigne.set("step", "0.1");
+        _mqttEntities.temperatureConsigne.set("step", "0.5");
         _mqttEntities.temperatureConsigne.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"temperatureConsigne", "set"}), 0, true);
         mqtt().onCommand(_mqttEntities.temperatureConsigne, [&](const String& payload) {
             float temperature = payload.toFloat();
