@@ -75,6 +75,34 @@ public:
     return _logs.size();
   }
 
+  void getLines(std::vector<Line>& out, size_t limit = 1000, const String& level = "") {
+    out.clear();
+    if (_logs.empty() || limit == 0) {
+      return;
+    }
+
+    bool filterByLevel = (level.length() > 0);
+
+    // On part de la fin (logs les plus récentes)
+    for (int i = (int)_logs.size() - 1; i >= 0 && out.size() < limit; --i) {
+      Line& line = _logs[i];
+
+      if (filterByLevel) {
+        if (!line.level.equals(level)) {
+          continue;
+        }
+      } else if(line.level.equals("RADIO")) {
+        continue;
+      }
+
+      out.push_back(line);
+    }
+
+    // Là on a les logs dans l'ordre "plus récent → plus ancien",
+    // on les remet dans l'ordre chronologique "plus ancien → plus récent"
+    std::reverse(out.begin(), out.end());
+  }
+
 private:
   size_t _maxLogSize;
   std::vector<Line> _logs;  // Associe le niveau de log à une liste de messages

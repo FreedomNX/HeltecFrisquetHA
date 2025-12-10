@@ -239,59 +239,31 @@ void Portal::handleGetLogs() {
     }
   }
 
-  // ?level=INFO / DEBUG / ERROR...
+  // ?level=INFO / DEBUG / ERROR / RADIO...
   String level;
   if (_srv.hasArg("level")) {
     level = _srv.arg("level");
   }
 
-  // Récupération brute (concat avec \n)
-  String raw = level.length() ? logs.getLogsByLevel(level)
-                              : logs.getAllLogs();
+  std::vector<Logs::Line> lines;
+  logs.getLines(lines, limit, level);
 
-  // Split en lignes
-  std::vector<String> lines;
-  int start = 0;
-  while (start < (int)raw.length()) {
-    int idx = raw.indexOf('\n', start);
-    if (idx < 0) {
-      String last = raw.substring(start);
-      last.trim();
-      if (last.length()) lines.push_back(last);
-      break;
-    }
-    String line = raw.substring(start, idx);
-    line.trim();
-    if (line.length()) lines.push_back(line);
-    start = idx + 1;
-  }
-
-  // Garde seulement les `limit` dernières lignes
-  size_t total = lines.size();
-  size_t from = (total > limit) ? (total - limit) : 0;
-
-  // Construction du JSON array attendu par le front
+  // On envoie un JSON array ["ligne1","ligne2",...]
   String json = "[";
   bool first = true;
-  for (size_t i = from; i < total; ++i) {
+  for (auto& l : lines) {
     if (!first) json += ",";
     first = false;
 
-    json += "\"";
-    const String& s = lines[i];
-    for (size_t j = 0; j < s.length(); ++j) {
-      char c = s[j];
-      if (c == '\"' || c == '\\') {
-        json += '\\';
-      }
-      json += c;
-    }
-    json += "\"";
+    String s = l.toString();
+    String escaped = jsonEscape(s);
+    json += "\"" + escaped + "\"";
   }
   json += "]";
 
   _srv.send(200, "application/json; charset=utf-8", json);
 }
+
 
 void Portal::handleLogsPage() {
   _srv.send(200, "text/html; charset=utf-8", logsHtml());
