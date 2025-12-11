@@ -166,6 +166,7 @@ void Satellite::loop() {
 
     if (now - _lastEnvoiConsigne >= 600000 || _lastEnvoiConsigne == 0) { // 10 minutes
         info("[SATELLITE Z%d] Envoi de la consigne.", getNumeroZone());
+        setMode(MODE::CONFORT_PERMANENT);
         if(envoyerConsigne()) {
             incrementIdMessage(3);
             _lastEnvoiConsigne = now;
