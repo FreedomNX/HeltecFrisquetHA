@@ -211,7 +211,7 @@ bool Satellite::autoActif() {
 }
 
 bool Satellite::envoyerConsigne() {
-    if(! estAssocie()) {
+    if(! estAssocie() || getNumeroZone() == 0) {
         return false;
     }
 
@@ -284,14 +284,13 @@ bool Satellite::envoyerConsigne() {
             0x01, 
             0xA029,
             0x0015,
-            0xA02F,
+            0xA02F + (0x0005 * (getNumeroZone() - 1)),
             0x0004,
             (byte*)&payload,
             sizeof(payload),
             (byte*)&donneesZones,
             length
         );
-
 
         Date date = donneesZones.date;
         setDate(date);
