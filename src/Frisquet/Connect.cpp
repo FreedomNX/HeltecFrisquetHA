@@ -104,6 +104,14 @@ bool Connect::envoyerZone(Zone& zone) {
     if(! estAssocie()) {
         return false;
     }
+
+    if(zone.getIdZone() == ID_ZONE_1 && getConfig().useSatelliteVirtualZ1()) {
+        return true;
+    } else if(zone.getIdZone() == ID_ZONE_2 && getConfig().useSatelliteVirtualZ2()) {
+        return true;
+    } else if(zone.getIdZone() == ID_ZONE_3 && getConfig().useSatelliteVirtualZ3()) {
+        return true;
+    }
     
     struct {
         temperature8 temperatureConfort;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
@@ -1448,4 +1456,16 @@ void Connect::Zone::desactiverBoost() {
 }
 bool Connect::Zone::boostActif() {
     return (_modeOptions & 0b01000000) != 0;
+}
+uint8_t Connect::Zone::getNumeroZone() {
+    switch(_idZone) {
+            case ID_ZONE_1: 
+                return 1;
+            case ID_ZONE_2: 
+                return 2;
+            case ID_ZONE_3: 
+                return 3;
+        }
+        
+        return 0;
 }

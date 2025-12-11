@@ -414,6 +414,13 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 return true;
             }
         }
+    } else {
+        if(header->idAssociation != getIdAssociation() || header->isAck()) {
+            return false;
+        }
+
+        radio().sendAnswer(getId(), header->idExpediteur, header->idAssociation, header->idMessage, header->idReception, header->type, {}, 0);
+        return true;
     }
 
     return false;

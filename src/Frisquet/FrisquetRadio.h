@@ -28,6 +28,10 @@ class FrisquetRadio : public Radio {
             radioTrameHeader.idReception = idReception | 0x80;
             radioTrameHeader.type = type;
         }
+
+        bool isAck() {
+            return idReception >= 0x80;
+        }
     };
 
     struct RadioTrameAsk {

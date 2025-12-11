@@ -46,6 +46,9 @@ class Connect : public FrisquetDevice {
                 
                 Zone(uint8_t idZone) : _idZone(idZone) {};
 
+
+                uint8_t getNumeroZone();
+
                 void setTemperatureConfort(float temperature);
                 void setTemperatureReduit(float temperature);
                 void setTemperatureHorsGel(float temperature);
