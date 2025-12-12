@@ -86,6 +86,7 @@ class Satellite : public FrisquetDevice {
             MqttEntity temperatureBoost;
             MqttEntity boost;
             MqttEntity mode;
+            MqttEntity thermostat;
         } _mqttEntities;
         
 };

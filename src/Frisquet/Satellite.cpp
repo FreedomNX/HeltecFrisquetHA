@@ -147,7 +147,28 @@ void Satellite::begin() {
         _mqttEntities.mode.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode", "set"}), 0, true);
     }*/
     mqtt().registerEntity(*device, _mqttEntities.mode, true);
+
     
+    // THERMOSTAT
+    _mqttEntities.thermostat.id = "thermostatSatZ" + String(getNumeroZone());
+    _mqttEntities.thermostat.name = "Thermostat Z" + String(getNumeroZone());
+    _mqttEntities.thermostat.component = "climate";
+    _mqttEntities.thermostat.set("icon", "mdi:tune-variant");
+    _mqttEntities.thermostat.setRaw("modes", R"(["heat"])");
+    _mqttEntities.thermostat.set("temperature_unit", "C");
+    _mqttEntities.thermostat.set("precision", 0.1);
+    _mqttEntities.thermostat.set("temp_step", 0.5);
+    _mqttEntities.thermostat.set("min_temp", 5);
+    _mqttEntities.thermostat.set("max_temp", 30);
+    _mqttEntities.thermostat.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"thermostat"}));
+    _mqttEntities.thermostat.set("mode_state_topic", MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"thermostat"}));
+    _mqttEntities.thermostat.set("preset_mode_command_topic", MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode","set"}));
+    _mqttEntities.thermostat.set("preset_mode_state_topic", MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"mode"}));
+    _mqttEntities.thermostat.set("current_temperature_topic", MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"temperatureAmbiante"}));
+    _mqttEntities.thermostat.set("temperature_command_topic", MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"temperatureConsigne", "set"}));
+    _mqttEntities.thermostat.set("temperature_state_topic", MqttManager::compose({device->baseTopic,"satellite", "z" + String(getNumeroZone()),"temperatureConsigne"}));
+    _mqttEntities.thermostat.setRaw("preset_modes", R"(["Confort","Réduit", "Hors-Gel"])");
+    mqtt().registerEntity(*device, _mqttEntities.thermostat, true);
 }
 
 void Satellite::loop() {
@@ -179,6 +200,9 @@ void Satellite::loop() {
 }
 
 void Satellite::publishMqtt() {
+
+    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("thermostatSatZ" + String(getNumeroZone())), "heat"); //TODO À adapter
+
     if(!isnan(getTemperatureAmbiante())) {
         mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("tempAmbSatZ" + String(getNumeroZone())), getTemperatureAmbiante());
     }

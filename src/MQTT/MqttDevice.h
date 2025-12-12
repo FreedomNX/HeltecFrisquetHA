@@ -73,6 +73,7 @@ inline void MqttEntity::buildDiscoveryJson(JsonDocument& doc) const {
   doc["uniq_id"] = devId + "_" + id;
   doc["name"]    = name;
 
+
   if (stateTopic.full.length())      doc["state_topic"] = stateTopic.full;
   if (commandTopic.full.length())    doc["command_topic"] = commandTopic.full;
   if (attributesTopic.full.length()) doc["json_attributes_topic"] = attributesTopic.full;
