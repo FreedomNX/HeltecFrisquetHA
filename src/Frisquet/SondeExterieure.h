@@ -32,7 +32,6 @@ class SondeExterieure : public FrisquetDevice {
         // MQTT
 
         struct {
-            MqttEntity associationSondeExterieure;
             MqttEntity tempExterieure;
         } _mqttEntities; 
 };

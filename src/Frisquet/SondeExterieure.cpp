@@ -99,28 +99,6 @@ void SondeExterieure::begin() {
 
   // Entités
 
-  // SWITCH: Association Sonde Extérieure
-    _mqttEntities.associationSondeExterieure.id = "associationSondeExterieure";
-    _mqttEntities.associationSondeExterieure.name = "Association Sonde Extérieure";
-    _mqttEntities.associationSondeExterieure.component = "switch";
-    _mqttEntities.associationSondeExterieure.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"sondeExterieure","association"}), 0, true);
-    _mqttEntities.associationSondeExterieure.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"sondeExterieure","association","set"}), 0, true);
-    _mqttEntities.associationSondeExterieure.set("icon", "mdi:tune-variant");
-    _mqttEntities.associationSondeExterieure.set("entity_category", "config");
-    mqtt().registerEntity(*device, _mqttEntities.associationSondeExterieure, true);
-    mqtt().onCommand(_mqttEntities.associationSondeExterieure, [&](const String& payload){
-        NetworkID networkId;
-        uint8_t idAssociation;
-        if(associer(networkId, idAssociation)) {
-            setIdAssociation(idAssociation);
-            radio().setNetworkID(networkId);
-            getConfig().setNetworkID(networkId);
-            getConfig().save();
-            saveConfig();
-        }
-    });
-
-
   // SENSOR: Température extérieure
   _mqttEntities.tempExterieure.id = "temperatureExterieureSonde";
   _mqttEntities.tempExterieure.name = "Température extérieure Sonde";

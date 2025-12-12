@@ -176,9 +176,7 @@ class Connect : public FrisquetDevice {
 
         // MQTT
 
-        struct {
-            MqttEntity associationConnect;
-        
+        struct {    
             MqttEntity modeZ1;
             MqttEntity modeZ2;
             MqttEntity modeZ3;

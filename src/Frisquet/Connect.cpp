@@ -579,28 +579,6 @@ void Connect::begin() {
   MqttDevice* device = mqtt().getDevice("heltecFrisquet");
   
   // Entités
-
-  // SWITCH: Association Connect
-
-    _mqttEntities.associationConnect.id = "associationConnect";
-    _mqttEntities.associationConnect.name = "Association Connect";
-    _mqttEntities.associationConnect.component = "switch";
-    _mqttEntities.associationConnect.stateTopic   = MqttTopic(MqttManager::compose({device->baseTopic,"connect","association"}), 0, true);
-    _mqttEntities.associationConnect.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"connect","association","set"}), 0, true);
-    _mqttEntities.associationConnect.set("icon", "mdi:tune-variant");
-    _mqttEntities.associationConnect.set("entity_category", "config");
-    mqtt().registerEntity(*device, _mqttEntities.associationConnect, true);
-    mqtt().onCommand(_mqttEntities.associationConnect, [&](const String& payload){
-        NetworkID networkId;
-        uint8_t idAssociation;
-        if(associer(networkId, idAssociation)) {
-            setIdAssociation(idAssociation);
-            radio().setNetworkID(networkId);
-            getConfig().setNetworkID(networkId);
-            getConfig().save();
-            saveConfig();
-        }
-    });
     
     // Zone 1
 
