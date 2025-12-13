@@ -155,4 +155,4 @@ void info(const char* fmt, ...);
 void error(String message);
 void error(const char* fmt, ...);
 void warning(String message);
-void warrning(const char* fmt, ...);
+void warning(const char* fmt, ...);
