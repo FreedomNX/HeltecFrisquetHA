@@ -19,6 +19,7 @@ void App::begin() {
 
 void App::loop() {
   // boucle des services
+  _networkManager.loop();
   _ota.loop();
   _portal->loop();
   _mqtt.loop();
