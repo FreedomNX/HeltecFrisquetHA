@@ -40,65 +40,33 @@ static bool parseNetworkIdFromString(const String& s, NetworkID& out) {
   return true;
 }
 
-static void jsonEscapeToBuffer(const char* in, char* out, size_t outSize) {
-  if (!out || outSize == 0) return;
-  out[0] = '\0';
-  if (!in) return;
+static String jsonEscape(const String& s) {
+    String out;
+    out.reserve(s.length() + 10);
 
-  size_t o = 0;
-  for (size_t i = 0; in[i] != '\0' && o + 2 < outSize; i++) {
-    const char c = in[i];
+    for (uint16_t i = 0; i < s.length(); i++) {
+        char c = s[i];
 
-    switch (c) {
-      case '\"': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='\"'; } break;
-      case '\\': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='\\'; } break;
-      case '\b': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='b'; } break;
-      case '\f': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='f'; } break;
-      case '\n': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='n'; } break;
-      case '\r': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='r'; } break;
-      case '\t': if (o + 2 < outSize) { out[o++]='\\'; out[o++]='t'; } break;
-      default:
-        // On garde les chars imprimables, on remplace le reste par '?'
-        if ((unsigned char)c < 0x20) {
-          out[o++] = '?';
-        } else {
-          out[o++] = c;
+        switch (c) {
+            case '\"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b";  break;
+            case '\f': out += "\\f";  break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:
+                if ((uint8_t)c < 0x20) {
+                    // Caractère de contrôle → tout en \u00XX
+                    char buf[7];
+                    sprintf(buf, "\\u%04X", (uint8_t)c);
+                    out += buf;
+                } else {
+                    out += c;
+                }
         }
-        break;
     }
-  }
-
-  out[o] = '\0';
-}
-
-String jsonEscape(const String& s) {
-  String out;
-  out.reserve(s.length() + 16); // marge
-
-  for (size_t i = 0; i < s.length(); ++i) {
-    char c = s[i];
-    switch (c) {
-      case '\"': out += "\\\""; break;
-      case '\\': out += "\\\\"; break;
-      case '\b': out += "\\b"; break;
-      case '\f': out += "\\f"; break;
-      case '\n': out += "\\n"; break;
-      case '\r': out += "\\r"; break;
-      case '\t': out += "\\t"; break;
-      default:
-        if ((uint8_t)c < 0x20) {
-          // caractère de contrôle → \u00XX
-          char buf[7];
-          snprintf(buf, sizeof(buf), "\\u%04x", (uint8_t)c);
-          out += buf;
-        } else {
-          out += c;
-        }
-        break;
-    }
-  }
-
-  return out;
+    return out;
 }
 
 // Helper pour parser un bool depuis une string
@@ -312,63 +280,34 @@ void Portal::handleGetLogs() {
   size_t limit = 100;
   if (_srv.hasArg("limit")) {
     int v = _srv.arg("limit").toInt();
-    if (v > 0) limit = (size_t)v;
-  }
-
-  // ?level=INFO / DEBUG / ERROR / RADIO...
-  char levelFilter[LOGS_LEVEL_LEN] = {0};
-  bool hasLevel = false;
-
-  if (_srv.hasArg("level")) {
-    String lvl = _srv.arg("level");
-    lvl.trim();
-    if (lvl.length() > 0) {
-      strncpy(levelFilter, lvl.c_str(), sizeof(levelFilter) - 1);
-      levelFilter[sizeof(levelFilter) - 1] = '\0';
-      hasLevel = true;
+    if (v > 0) {
+      limit = (size_t)v;
     }
   }
 
-  // On prépare une réponse "chunked" (pas de gros String)
-  _srv.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  _srv.send(200, "application/json; charset=utf-8", "");
-
-  _srv.sendContent("[");
-
-  // On récupère les N dernières lignes dans un buffer local (pile)
-  // -> pas de vector, pas de heap
-  const size_t MAX_TMP = 200; // protège la stack si quelqu’un met limit=100000
-  size_t cap = limit > MAX_TMP ? MAX_TMP : limit;
-
-  LogLine tmp[MAX_TMP];
-  size_t n = logs.getLastLines(
-    tmp,
-    cap,
-    limit,
-    hasLevel ? levelFilter : nullptr,
-    /*excludeRadio*/ true
-  );
-
-  bool first = true;
-  char lineStr[256];
-  char escaped[512]; // doit être >= 2x pour échapper (au pire)
-
-  for (size_t i = 0; i < n; i++) {
-    tmp[i].toString(lineStr, sizeof(lineStr));
-
-    // jsonEscape -> il faut une version "char* -> char*" (je te la donne plus bas)
-    jsonEscapeToBuffer(lineStr, escaped, sizeof(escaped));
-
-    if (!first) _srv.sendContent(",");
-    first = false;
-
-    _srv.sendContent("\"");
-    _srv.sendContent(escaped);
-    _srv.sendContent("\"");
+  // ?level=INFO / DEBUG / ERROR / RADIO...
+  String level;
+  if (_srv.hasArg("level")) {
+    level = _srv.arg("level");
   }
 
-  _srv.sendContent("]");
-  _srv.sendContent(""); // flush
+  std::vector<Logs::Line> lines;
+  logs.getLines(lines, limit, level);
+
+  // On envoie un JSON array ["ligne1","ligne2",...]
+  String json = "[";
+  bool first = true;
+  for (auto& l : lines) {
+    if (!first) json += ",";
+    first = false;
+
+    String s = l.toString();
+    String escaped = jsonEscape(s);
+    json += "\"" + escaped + "\"";
+  }
+  json += "]";
+
+  _srv.send(200, "application/json; charset=utf-8", json);
 }
 
 
