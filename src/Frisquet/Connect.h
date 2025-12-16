@@ -3,11 +3,16 @@
 #include "FrisquetDevice.h"
 #include <Preferences.h>
 #include "../Logs.h"
+#include "Zone.h"
 
 class Connect : public FrisquetDevice {
     
     public:
-        Connect(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt) : FrisquetDevice(radio, cfg, mqtt, ID_CONNECT) {}
+        Connect(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt, Zone& zone1, Zone& zone2, Zone& zone3) : 
+            FrisquetDevice(radio, cfg, mqtt, ID_CONNECT),
+            _zone1(zone1),
+            _zone2(zone2),
+            _zone3(zone3) {}
         void loadConfig();
         void saveConfig();
 
@@ -16,96 +21,12 @@ class Connect : public FrisquetDevice {
 
          enum MODE_ECS : uint8_t {
                     INCONNU = 0XFF,
-                    STOP = 0x29,
-                    MAX = 0x01,
-                    ECO = 0x09,
-                    ECO_HORAIRES = 0x11,
-                    ECOPLUS = 0x19,
-                    ECOPLUS_HORAIRES = 0x21
-                };
-
-        class Zone {
-            public:
-                enum MODE_ZONE : uint8_t {
-                    INCONNU = 0xFF,
-                    AUTO = 0x05,
-                    CONFORT = 0x06,
-                    REDUIT = 0X07,
-                    HORS_GEL = 0x08
-                };
-
-                struct Programmation {
-                    byte dimanche[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte lundi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte mardi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte mercredi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte jeudi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte vendredi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                    byte samedi[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                };
-                
-                Zone(uint8_t idZone) : _idZone(idZone) {};
-
-
-                uint8_t getNumeroZone();
-
-                void setTemperatureConfort(float temperature);
-                void setTemperatureReduit(float temperature);
-                void setTemperatureHorsGel(float temperature);
-                void setTemperatureAmbiante(float temperature);
-                void setTemperatureConsigne(float temperature);
-                void setTemperatureDepart(float temperature);
-                void setTemperatureBoost(float temperature);
-
-                float getTemperatureConfort();
-                float getTemperatureReduit();
-                float getTemperatureHorsGel();
-                
-                float getTemperatureConsigne();
-                float getTemperatureAmbiante();
-                float getTemperatureDepart();
-                float getTemperatureBoost();
-
-                uint8_t getIdZone();
-
-                MODE_ZONE getMode();
-                void setMode(MODE_ZONE mode);
-                void setMode(const String& mode);
-                byte getModeOptions();
-                void setModeOptions(byte modeOptions);
-
-                void activerBoost();
-                void desactiverBoost();
-                bool boostActif();
-
-                String getNomMode();
-
-                Programmation& getProgrammation() { return _programmation; };
-                void setProgrammation(Programmation& programmation) { memcpy(&_programmation, &programmation, sizeof(programmation)); };
-
-            private:
-                uint8_t _idZone = 0x00;
-                float _temperatureConfort = NAN;                       // Début 5°C -> max 30°C
-                float _temperatureReduit = NAN;                        // Début 5°C -> max 30°C
-                float _temperatureHorsGel = NAN;                       // Début 5°C -> max 30°C
-                float _temperatureDepart = NAN;   
-                float _temperatureConsigne = NAN; 
-                float _temperatureAmbiante = NAN;
-                float _temperatureBoost = NAN;
-
-                MODE_ZONE _mode = MODE_ZONE::INCONNU;            // 0x05 auto - 0x06 confort - 0x07 reduit - 0x08 hors gel
-                byte _modeOptions = 0x05;
-                /*
-                Mode Option structure bits
-                    inconnu1: 1 bit,
-                    boost: 1 bit,
-                    inconnu2: 2 bits,
-                    inconnu3: 2 bits,
-                    derogation: 1 bit,
-                    confort: 1 bit
-                */
-
-                Programmation _programmation;
+            STOP = 0x29,
+            MAX = 0x01,
+            ECO = 0x09,
+            ECO_HORAIRES = 0x11,
+            ECOPLUS = 0x19,
+            ECOPLUS_HORAIRES = 0x21
         };
 
 
@@ -143,9 +64,9 @@ class Connect : public FrisquetDevice {
 
         void publishMqtt();
     private:
-        Zone _zone1 = Zone(ID_ZONE_1);
-        Zone _zone2 = Zone(ID_ZONE_2);
-        Zone _zone3 = Zone(ID_ZONE_3);
+        Zone& _zone1;
+        Zone& _zone2;
+        Zone& _zone3;
 
         float _temperatureECS = NAN;
         float _temperatureCDC = NAN;
@@ -177,43 +98,7 @@ class Connect : public FrisquetDevice {
         // MQTT
 
         struct {    
-            MqttEntity modeZ1;
-            MqttEntity modeZ2;
-            MqttEntity modeZ3;
             MqttEntity modeECS;
-
-            MqttEntity tempAmbianteZ1;
-            MqttEntity tempAmbianteZ2;
-            MqttEntity tempAmbianteZ3;
-
-            MqttEntity tempConsigneZ1;
-            MqttEntity tempConsigneZ2;
-            MqttEntity tempConsigneZ3;
-
-            MqttEntity tempConfortZ1;
-            MqttEntity tempConfortZ2;
-            MqttEntity tempConfortZ3;
-
-            MqttEntity tempReduitZ1;
-            MqttEntity tempReduitZ2;
-            MqttEntity tempReduitZ3;
-
-            MqttEntity tempHorsGelZ1;
-            MqttEntity tempHorsGelZ2;
-            MqttEntity tempHorsGelZ3;
-
-            MqttEntity tempDepartZ1;
-            MqttEntity tempDepartZ2;
-            MqttEntity tempDepartZ3;
-
-            MqttEntity tempBoostZ1;
-            MqttEntity tempBoostZ2;
-            MqttEntity tempBoostZ3;
-
-            MqttEntity boostZ1;
-            MqttEntity boostZ2;
-            MqttEntity boostZ3;
-
             MqttEntity tempECS;
             MqttEntity tempCDC;
             MqttEntity tempExterieure;

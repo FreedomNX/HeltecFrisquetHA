@@ -1,10 +1,10 @@
 #include "FrisquetManager.h"
 
 FrisquetManager::FrisquetManager(FrisquetRadio &radio, Config &cfg, MqttManager &mqtt)
-    :   _radio(radio), _cfg(cfg), _mqtt(mqtt), _sondeExterieure(radio, cfg, mqtt), _connect(radio, cfg, mqtt),
-        _satelliteZ1(radio, cfg, mqtt, ID_ZONE_1), _satelliteZ2(radio, cfg, mqtt, ID_ZONE_2), _satelliteZ3(radio, cfg, mqtt, ID_ZONE_3)
-{
-}
+    :   _radio(radio), _cfg(cfg), _mqtt(mqtt),
+        _zone1(ID_ZONE_1, mqtt), _zone2(ID_ZONE_2, mqtt), _zone3(ID_ZONE_3, mqtt),
+        _sondeExterieure(radio, cfg, mqtt), _connect(radio, cfg, mqtt, _zone1, _zone2, _zone3),
+        _satelliteZ1(radio, cfg, mqtt, _zone1), _satelliteZ2(radio, cfg, mqtt, _zone2), _satelliteZ3(radio, cfg, mqtt, _zone3) {}
 
 void FrisquetManager::begin()
 {
@@ -13,6 +13,33 @@ void FrisquetManager::begin()
     _radio.setNetworkID(_cfg.getNetworkID());
 
     initMqtt();
+
+    if(_cfg.useSatelliteVirtualZ1()) {
+        _zone1.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+    } else if(_cfg.useConnect()) {
+        _zone1.setSource(Zone::SOURCE::CONNECT);
+    } else {
+        _zone1.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+    }
+    _zone1.begin();
+    
+    if(_cfg.useSatelliteVirtualZ2()) {
+        _zone2.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+    } else if(_cfg.useConnect()) {
+        _zone2.setSource(Zone::SOURCE::CONNECT);
+    } else {
+        _zone2.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+    }
+    _zone2.begin();
+
+    if(_cfg.useSatelliteVirtualZ3()) {
+        _zone3.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+    } else if(_cfg.useConnect()) {
+        _zone3.setSource(Zone::SOURCE::CONNECT);
+    } else {
+        _zone3.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+    }
+    _zone3.begin();
 
     if (_cfg.useConnect()) {
         _connect.begin();
@@ -28,22 +55,13 @@ void FrisquetManager::begin()
         }
     }
     if (_cfg.useSatelliteZ1()) {
-        if(_cfg.useSatelliteVirtualZ1()) {
-            _satelliteZ1.setModeVirtuel(true);
-        }
-        _satelliteZ1.begin();
+        _satelliteZ1.begin(_cfg.useSatelliteVirtualZ1());
     }
     if (_cfg.useSatelliteZ2()) {
-        if(_cfg.useSatelliteVirtualZ2()) {
-            _satelliteZ2.setModeVirtuel(true);
-        }
-        _satelliteZ2.begin();
+        _satelliteZ2.begin(_cfg.useSatelliteVirtualZ2());
     }
     if (_cfg.useSatelliteZ3()) {
-        if(_cfg.useSatelliteVirtualZ3()) {
-            _satelliteZ3.setModeVirtuel(true);
-        }
-        _satelliteZ3.begin();
+        _satelliteZ3.begin(_cfg.useSatelliteVirtualZ3());
     }
 
     _mqtt.publishAvailability(*_mqtt.getDevice("heltecFrisquet"), true);

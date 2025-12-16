@@ -8,6 +8,7 @@
 #include "Logs.h"
 #include "DS18B20.h"
 #include "Frisquet/Satellite.h"
+#include "Frisquet/Zone.h"
 
 class FrisquetManager {
 public:
@@ -38,6 +39,10 @@ private:
   Satellite _satelliteZ1;
   Satellite _satelliteZ2;
   Satellite _satelliteZ3;
+
+  Zone _zone1;
+  Zone _zone2;
+  Zone _zone3;
 
   DS18B20* _ds18b20;
 

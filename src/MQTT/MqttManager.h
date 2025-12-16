@@ -49,14 +49,14 @@ public:
     if (!d.availabilityTopic.full.length()) {
       d.availabilityTopic = MqttTopic(compose({d.baseTopic, d.deviceId, "availability"}), 1, true);
     }
-    _devices.insert({d.deviceId, &d});
+    _devices[d.deviceId] = &d;
   }
 
   // Ajoute une entité au device et publie sa discovery (optionnel)
   void registerEntity(MqttDevice& d, MqttEntity& e, bool publishDiscovery = true) {
     if (!isRegistered(&d)) registerDevice(d);
     e.device = &d;
-    d.entities.insert({e.id, &e});
+    d.entities[e.id] = &e;
 
     if (publishDiscovery) publishEntityDiscovery(e);
 
@@ -70,6 +70,11 @@ public:
     if (!e.commandTopic.full.length()) return false;
     _commandHandlers[e.commandTopic.full] = cb;
     return _mqtt.subscribe(e.commandTopic.full.c_str());
+  }
+  bool onCommand(const MqttTopic& commandTopic, CommandCallback cb) {
+    if (!commandTopic.full.length()) return false;
+    _commandHandlers[commandTopic.full] = cb;
+    return _mqtt.subscribe(commandTopic.full.c_str());
   }
 
   // Publish helpers

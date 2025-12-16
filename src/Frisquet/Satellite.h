@@ -3,11 +3,11 @@
 #include "FrisquetDevice.h"
 #include <Preferences.h>
 #include "Logs.h"
+#include "Zone.h"
 
 class Satellite : public FrisquetDevice {
     
     public:
-
         enum MODE : uint8_t {
             REDUIT_PERMANENT = 0x00,
             CONFORT_PERMANENT = 0x01,
@@ -19,40 +19,24 @@ class Satellite : public FrisquetDevice {
             INCONNU = 0xFF,
         };
 
-        Satellite(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt, uint8_t idZone) : FrisquetDevice(radio, cfg, mqtt, idZone) {}
+        Satellite(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt, Zone& zone) : FrisquetDevice(radio, cfg, mqtt, zone.getIdZone()), _zone(zone) {}
         void loadConfig();
         void saveConfig();
 
         void loop();
-        void begin();
+        void begin(bool modeVirtuel = false);
         void publishMqtt();
 
         bool envoyerConsigne();
 
         bool onReceive(byte* donnees, size_t length);
 
-        MODE getMode() { return _mode; }
-        void setMode(MODE mode) { _mode = mode; }
+        MODE getMode();
+        void setMode(MODE mode);
         String getNomMode();
 
-        void setTemperatureAmbiante(float temperature) { this->_temperatureAmbiante = temperature; }
-        void setTemperatureConsigne(float temperature) { this->_temperatureConsigne = std::min(30.0f, std::max(5.0f, temperature)); }
-        float getTemperatureConsigne() { return this->_temperatureConsigne; }
-        float getTemperatureAmbiante() { return this->_temperatureAmbiante; }
-
-        bool boostActif() { return _boost; }
-        void activerBoost() { _boost = true; }
-        void desactiverBoost() { _boost = false; }
-        void setTemperatureBoost(float temperature) { _temperatureBoost = std::min(5.0f, std::max(0.0f, temperature)); }
-        float getTemperatureBoost() { return _temperatureBoost; }
-
-        void setModeVirtuel(bool modeVirtuel) { _modeVirtuel = modeVirtuel; }
-
-        bool confortActif();
-        bool reduitActif();
-        bool horsGelActif();
-        bool derogationActive();
-        bool autoActif();
+        void setEcrasement(bool ecrasement) { _ecrasement = ecrasement; }
+        bool getEcrasement() { return _ecrasement; }
 
         uint8_t getNumeroZone() {
             switch(this->getId()) {
@@ -68,25 +52,13 @@ class Satellite : public FrisquetDevice {
         }
 
     private:
-
-        float _temperatureAmbiante = NAN;
-        float _temperatureConsigne = NAN;
-        MODE _mode = MODE::INCONNU;
-
-        bool _modeVirtuel = false;
-
-        bool _boost = false;
-        float _temperatureBoost = 5;
+        Zone& _zone;
 
         uint32_t _lastEnvoiConsigne = 0;
+        bool _modeVirtuel = false;
+        bool _ecrasement = false;
 
         struct {
-            MqttEntity temperatureAmbiante;
-            MqttEntity temperatureConsigne;
-            MqttEntity temperatureBoost;
-            MqttEntity boost;
-            MqttEntity mode;
-            MqttEntity thermostat;
+            MqttEntity ecrasementConsigne;
         } _mqttEntities;
-        
 };
