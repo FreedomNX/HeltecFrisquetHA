@@ -83,6 +83,7 @@ void Satellite::begin() {
             if(!isnan(temperature)) {
                 info("[SATELLITE Z%d] Modification de la température ambiante à %0.2f.", getNumeroZone(), temperature);
                 setTemperatureAmbiante(temperature);
+                saveConfig();
                 mqtt().publishState(_mqttEntities.temperatureAmbiante, getTemperatureAmbiante());
             }
         });
@@ -109,6 +110,7 @@ void Satellite::begin() {
             if(!isnan(temperature)) {
                 info("[SATELLITE Z%d] Modification de la température consigne à %0.2f.", getNumeroZone(), temperature);
                 setTemperatureConsigne(temperature);
+                saveConfig();
                 mqtt().publishState(_mqttEntities.temperatureConsigne, getTemperatureConsigne());
                 envoyerConsigne();
             }
