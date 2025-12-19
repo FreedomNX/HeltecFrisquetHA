@@ -80,10 +80,11 @@ bool Satellite::envoyerConsigne() {
         return false;
     }
 
-    if(isnan(_zone.getTemperatureAmbiante()) || isnan(_zone.getTemperatureConsigne()) || _zone.getMode() == Zone::MODE_ZONE::INCONNU) {
+    if(isnan(_zone.getTemperatureAmbiante()) || isnan(_zone.getTemperatureConsigne()) || _zone.getMode() == Zone::MODE_ZONE::INCONNU || _zone.getNumeroZone() == 0) {
+        error("[SATELLITE Z%d] Impossible d'envoyer la consigne, configuration incomplète.", getNumeroZone());
         return false;
     }
-    
+
     struct donneesSatellite_t {
         temperature16 temperatureAmbiante; 
         temperature16 temperatureConsigne;
@@ -140,7 +141,7 @@ bool Satellite::envoyerConsigne() {
             return false;
     }
 
-    if(_zone.boostActif()) { // TODO Revoir cette zone
+    /*if(_zone.boostActif()) { // TODO Revoir cette zone
         payload.temperatureConsigne = _zone.getTemperatureConsigne() + _zone.getTemperatureBoost();
         if(getMode() == MODE::REDUIT_AUTO) {
             payload.mode = MODE::CONFORT_DEROGATION;
@@ -151,10 +152,14 @@ bool Satellite::envoyerConsigne() {
         } else if(getMode() == MODE::HORS_GEL) {
             return false;
         }
-    }
+    }*/
     
     size_t length = 0;
     uint16_t err;
+
+    info("[Satellite %d] Envoi de la consigne %0.2f, amb %0.2f.", _zone.getNumeroZone(), _zone.getTemperatureConsigne(), _zone.getTemperatureAmbiante());
+    logRadio(false, (byte*)&payload, sizeof(donneesZones_t));
+    return true; //TODO A SUPPRIMER
 
     uint8_t retry = 0;
     do {

@@ -37,6 +37,14 @@ bool Connect::envoyerZone(Zone& zone) {
         return false;
     }
 
+    if(isnan(zone.getTemperatureConfort()) || isnan(zone.getTemperatureReduit()) || isnan(zone.getTemperatureHorsGel()) || zone.getMode() == Zone::MODE_ZONE::INCONNU) {
+        error("[CONNECT] Impossible d'envoyer la zone %d, configuration incomplète.", zone.getNumeroZone());
+        return false;
+    }
+
+    info("[CONNECT] Envoi de la zone %d.", zone.getNumeroZone());
+    return true;//TODO A SUPPRIMER
+
     if(zone.getIdZone() == ID_ZONE_1 && getConfig().useSatelliteVirtualZ1()) {
         return true;
     } else if(zone.getIdZone() == ID_ZONE_2 && getConfig().useSatelliteVirtualZ2()) {
