@@ -36,7 +36,10 @@ struct temperature8 {
         this->value = b0;
     }
     temperature8(float value) {
-        this->value = uint16_t((round(value * 2.0f) / 2)*10) - 50;   // Début 5°C -> 0 - MAX 30°C -> 250, incrément 0,5
+        if(isnan(value)) {
+            value = 5;
+        }
+        this->value = uint8_t((round(value * 2.0f) / 2)*10) - 50;   // Début 5°C -> 0 - MAX 30°C -> 250, incrément 0,5
     }
 
     float toFloat() const {
@@ -93,6 +96,9 @@ struct temperature16 {
         memcpy(this->bytes, bytes, 2);
     }
     temperature16(float value) {
+        if(isnan(value)) {
+            value = 0;
+        }
         int16_t intValue = static_cast<int16_t>(round(value * 10.0f));
         this->bytes[0] = (intValue >> 8) & 0xFF;
         this->bytes[1] = intValue & 0xFF;
