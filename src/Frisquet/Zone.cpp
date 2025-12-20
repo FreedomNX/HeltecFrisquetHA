@@ -67,10 +67,12 @@ void Zone::begin() {
                 setTemperatureConsigne(getTemperatureHorsGel());
             }
 
+            info("[ZONE Z%d] Changement du mode : %d %s.", getNumeroZone(), getMode(), getNomMode());
             mqtt().publishState(_mqttEntities.temperatureConsigne, getTemperatureConsigne());
             mqtt().publishState(_mqttEntities.mode, getNomMode());
+            refreshLastChange();
+            saveConfig();
         }
-        _lastChange = millis();
     });
 
     // SENSOR: Température ambiante
@@ -82,12 +84,11 @@ void Zone::begin() {
     _mqttEntities.temperatureAmbiante.set("state_class", "measurement");
     _mqttEntities.temperatureAmbiante.set("unit_of_measurement", "°C");
     if(getSource() == SOURCE::SATELLITE_VIRTUEL) {
-        /*_mqttEntities.temperatureAmbiante.component = "number";
+        _mqttEntities.temperatureAmbiante.component = "number";
         _mqttEntities.temperatureAmbiante.set("min", "0");
         _mqttEntities.temperatureAmbiante.set("max", "50");
         _mqttEntities.temperatureAmbiante.set("mode", "box");
         _mqttEntities.temperatureAmbiante.set("step", "0.1");
-        */
         _mqttEntities.temperatureAmbiante.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic, "z" + String(getNumeroZone()),"temperatureAmbiante", "set"}), 0, true);
         mqtt().onCommand(_mqttEntities.temperatureAmbiante, [&](const String& payload) {
             float temperature = payload.toFloat();
@@ -95,6 +96,7 @@ void Zone::begin() {
                 info("[ZONE Z%d] Modification de la température ambiante à %0.2f.", getNumeroZone(), temperature);
                 setTemperatureAmbiante(temperature);
                 mqtt().publishState(_mqttEntities.temperatureAmbiante, getTemperatureAmbiante());
+                saveConfig();
             }
         });
     }
@@ -122,6 +124,7 @@ void Zone::begin() {
                 setTemperatureConsigne(temperature);
                 mqtt().publishState(_mqttEntities.temperatureConsigne, getTemperatureConsigne());
                 refreshLastChange();
+                saveConfig();
             }
         });
     }
@@ -146,7 +149,9 @@ void Zone::begin() {
         if(!isnan(temperature)) {
             info("[ZONE %d] Modification de la température confort à %0.2f.", getNumeroZone(), temperature);
             setTemperatureConfort(temperature);
+            mqtt().publishState(_mqttEntities.temperatureConfort, temperature);
             refreshLastChange();
+            saveConfig();
         }
     });
 
@@ -169,7 +174,9 @@ void Zone::begin() {
         if(!isnan(temperature)) {
             info("[ZONE %d] Modification de la température réduit à %0.2f.", getNumeroZone(), temperature);
             setTemperatureReduit(temperature);
+            mqtt().publishState(_mqttEntities.temperatureReduit, temperature);
             refreshLastChange();
+            saveConfig();
         }
     });
 
@@ -192,7 +199,9 @@ void Zone::begin() {
         if(!isnan(temperature)) {
             info("[ZONE %d] Modification de la température hors-gel à %0.2f.", getNumeroZone(), temperature);
             setTemperatureHorsGel(temperature);
+            mqtt().publishState(_mqttEntities.temperatureHorsGel, temperature);
             refreshLastChange();
+            saveConfig();
         }
     });
 
@@ -226,6 +235,7 @@ void Zone::begin() {
             info("[ZONE %d] Modification de la température de boost à %0.2f.", getNumeroZone(), temperature);
             setTemperatureBoost(temperature);
             mqtt().publishState(_mqttEntities.temperatureBoost, temperature);
+            saveConfig();
             if(boostActif()) {
                 refreshLastChange();
             }
@@ -248,7 +258,9 @@ void Zone::begin() {
             info("[ZONE %d] Désactivation du boost", getNumeroZone());
             desactiverBoost();
         }
+        saveConfig();
         refreshLastChange();
+        mqtt().publishState(_mqttEntities.boost, payload);
     });
 
 
@@ -257,7 +269,7 @@ void Zone::begin() {
     _mqttEntities.thermostat.name = "Thermostat Z" + String(getNumeroZone());
     _mqttEntities.thermostat.component = "climate";
     _mqttEntities.thermostat.set("icon", "mdi:tune-variant");
-    _mqttEntities.thermostat.setRaw("modes", R"(["heat"])");
+    _mqttEntities.thermostat.setRaw("modes", R"(["auto"])");
     _mqttEntities.thermostat.set("temperature_unit", "C");
     _mqttEntities.thermostat.set("precision", 0.1);
     _mqttEntities.thermostat.set("temp_step", 0.5);
@@ -270,30 +282,54 @@ void Zone::begin() {
     _mqttEntities.thermostat.set("current_temperature_topic", MqttManager::compose({device->baseTopic, "z" + String(getNumeroZone()),"temperatureAmbiante"}));
     _mqttEntities.thermostat.set("temperature_command_topic", MqttManager::compose({device->baseTopic, "z" + String(getNumeroZone()),"temperatureConsigne", "set"}));
     _mqttEntities.thermostat.set("temperature_state_topic", MqttManager::compose({device->baseTopic, "z" + String(getNumeroZone()),"temperatureConsigne"}));
-    _mqttEntities.thermostat.setRaw("preset_modes", R"(["Confort","Réduit", "Hors-Gel", "Auto"])");
+    _mqttEntities.thermostat.setRaw("preset_modes", R"(["Confort","Réduit", "Hors Gel", "Auto", "Boost"])");
     mqtt().registerEntity(*device, _mqttEntities.thermostat, true);
 }
 
 
 void Zone::setTemperatureConfort(float temperature) {
+    if(isnan(temperature)) {
+        this->_temperatureConfort = NAN;
+        return;
+    }
     temperature = round(temperature * 2) / 2.0f;
     this->_temperatureConfort = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Zone::setTemperatureReduit(float temperature) {
+    if(isnan(temperature)) {
+        this->_temperatureReduit = NAN;
+        return;
+    }
     temperature = round(temperature * 2) / 2.0f;
     this->_temperatureReduit = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Zone::setTemperatureHorsGel(float temperature) {
+    if(isnan(temperature)) {
+        this->_temperatureHorsGel = NAN;
+        return;
+    }
     temperature = round(temperature * 2) / 2.0f;
     this->_temperatureHorsGel = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Zone::setTemperatureAmbiante(float temperature) {
+    if(isnan(temperature)) {
+        this->_temperatureAmbiante = NAN;
+        return;
+    }
     this->_temperatureAmbiante = temperature;
 }
 void Zone::setTemperatureConsigne(float temperature) {
+    if(isnan(temperature)) {
+        this->_temperatureConsigne = NAN;
+        return;
+    }
     this->_temperatureConsigne = std::min(30.0f, std::max(5.0f, temperature));
 }
 void Zone::setTemperatureBoost(float temperature) {
+    if(isnan(temperature)) {
+        this->_temperatureBoost = NAN;
+        return;
+    }
     temperature = round(temperature * 2) / 2.0f;
     //this->_temperatureBoost = std::min(30.0f, std::max(5.0f, temperature));
     this->_temperatureBoost = std::min(5.0f, std::max(0.5f, temperature));
@@ -345,7 +381,7 @@ void Zone::setMode(const String& mode, bool confort, bool derogation) {
   } else if (mode.equalsIgnoreCase("Réduit")) {
     this->setMode(MODE_ZONE::REDUIT);
     this->desactiverBoost();
-  } else if (mode.equalsIgnoreCase("Hors gel")) {
+  } else if (mode.equalsIgnoreCase("Hors Gel")) {
     this->setMode(MODE_ZONE::HORS_GEL);
     this->desactiverBoost();
   } else if (mode.equalsIgnoreCase("Confort")) {
@@ -431,6 +467,7 @@ bool Zone::derogationActive() {
 
 
 void Zone::publishMqtt() {
+    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("thermostatZ" + String(getNumeroZone())), "auto");
     if(!isnan(getTemperatureAmbiante())) {
         mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("temperatureAmbianteZ" + String(getNumeroZone())), getTemperatureAmbiante());
     }

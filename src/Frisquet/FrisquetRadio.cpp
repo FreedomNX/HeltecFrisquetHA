@@ -96,6 +96,7 @@ uint16_t FrisquetRadio::sendInit(
     interruptReceive = true;
     uint8_t retry = 0;
     uint16_t err;
+
     do {
         delay(30);
         logRadio(false, (byte*)payload, sizeof(payload));

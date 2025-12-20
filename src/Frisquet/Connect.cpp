@@ -37,13 +37,12 @@ bool Connect::envoyerZone(Zone& zone) {
         return false;
     }
 
-    if(isnan(zone.getTemperatureConfort()) || isnan(zone.getTemperatureReduit()) || isnan(zone.getTemperatureHorsGel()) || zone.getMode() == Zone::MODE_ZONE::INCONNU) {
+    if(isnan(zone.getTemperatureConfort()) || isnan(zone.getTemperatureReduit()) || isnan(zone.getTemperatureHorsGel()) || zone.getMode() == Zone::MODE_ZONE::INCONNU || zone.getNumeroZone() == 0) {
         error("[CONNECT] Impossible d'envoyer la zone %d, configuration incomplète.", zone.getNumeroZone());
         return false;
     }
 
     info("[CONNECT] Envoi de la zone %d.", zone.getNumeroZone());
-    return true;//TODO A SUPPRIMER
 
     if(zone.getIdZone() == ID_ZONE_1 && getConfig().useSatelliteVirtualZ1()) {
         return true;
@@ -68,8 +67,7 @@ bool Connect::envoyerZone(Zone& zone) {
             derogation: 1 bit,
             confort: 1 bit
         */
-        byte inconnu1 = 0x00; // Incrément boost ?
-        //TODO Ajouter la programmation de la semaine
+        byte inconnu1 = 0x00;
     } payload;
     
     if(zone.boostActif()) {
@@ -550,6 +548,9 @@ void Connect::begin() {
   _mqttEntities.tempExterieure.id = "temperatureExterieure";
   _mqttEntities.tempExterieure.name = "Température extérieure";
   _mqttEntities.tempExterieure.component = "sensor";
+  if(getConfig().useSondeExterieure() && !getConfig().useDS18B20()) {
+    _mqttEntities.tempExterieure.component = "number";
+  }
   _mqttEntities.tempExterieure.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "sondeExterieure", "temperatureExterieure"}), 0, true);
   _mqttEntities.tempExterieure.set("device_class", "temperature");
   _mqttEntities.tempExterieure.set("state_class", "measurement");

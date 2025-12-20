@@ -34,15 +34,16 @@ private:
   Config&        _cfg;
   MqttManager&   _mqtt;
 
-  SondeExterieure _sondeExterieure;
-  Connect _connect;
-  Satellite _satelliteZ1;
-  Satellite _satelliteZ2;
-  Satellite _satelliteZ3;
-
   Zone _zone1;
   Zone _zone2;
   Zone _zone3;
+
+  SondeExterieure _sondeExterieure;
+  Connect _connect;
+
+  Satellite _satelliteZ1;
+  Satellite _satelliteZ2;
+  Satellite _satelliteZ3;
 
   DS18B20* _ds18b20;
 

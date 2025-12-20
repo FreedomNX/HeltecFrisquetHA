@@ -19,12 +19,12 @@ void Satellite::begin(bool modeVirtuel) {
     _modeVirtuel = modeVirtuel;
     loadConfig();
 
-    info("[SATELLITE Z%d] Initialisation des entités.", getNumeroZone());
+    info("[SATELLITE Z%d] Initialisation du satellite [MODE %s].", _zone.getNumeroZone(), _modeVirtuel ? "VIRTUEL" : "PHYSIQUE");
 
     // Device commun
     MqttDevice* device = mqtt().getDevice("heltecFrisquet");
 
-    // SWITCH: Activation Boost
+    // SWITCH: Activation Écrasement consigne
     _mqttEntities.ecrasementConsigne.id = "ecrasementConsigneZ" + String(getNumeroZone());
     _mqttEntities.ecrasementConsigne.name = "Écrasement consigne Z" + String(getNumeroZone());
     _mqttEntities.ecrasementConsigne.component = "switch";
@@ -58,9 +58,9 @@ void Satellite::loop() {
         return;
     }
 
-    if ((_zone.getLastChange()) > (_zone.getLastEnvoi() + 15000) || now - _lastEnvoiConsigne >= 600000  ) { // dernier changement ou 10 minutes
+    if ((_zone.getLastChange() > _zone.getLastEnvoi() && (_zone.getLastChange() + 15000) < now ) || now - _lastEnvoiConsigne >= 600000  ) { // dernier changement ou 10 minutes
         info("[SATELLITE Z%d] Envoi de la consigne.", getNumeroZone());
-        setMode(MODE::CONFORT_PERMANENT);
+        _zone.refreshLastEnvoi();
         if(envoyerConsigne()) {
             incrementIdMessage(3);
             _lastEnvoiConsigne = now;
@@ -99,7 +99,7 @@ bool Satellite::envoyerConsigne() {
         temperature16 temperatureExterieure;
         byte i1[2];
         uint8_t date[6];  // format reçu "YY MM DD hh mm ss"
-        byte modeChaudiere; // mode chaudière à valider
+        byte modeChaudiere; // mode chaudière à valider 0X20 Hors gel 0x24 = Hors gel contact sec 0X28 = Fonctionnement
         uint8_t jourSemaine; // format wday
         temperature16 temperatureAmbianteZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
         temperature16 temperatureConsigneZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
@@ -117,6 +117,7 @@ bool Satellite::envoyerConsigne() {
         uint8_t modeZ3 = 0x00;                       // 0x05 auto - 0x06 confort - 0x07 reduit - 0x08 hors gel
         byte i7[4] = {0x00, 0x00, 0x00, 0x00};
     } donneesZones;
+
     
     payload.temperatureAmbiante = _zone.getTemperatureAmbiante();
     payload.temperatureConsigne = _zone.getTemperatureConsigne();
@@ -138,12 +139,13 @@ bool Satellite::envoyerConsigne() {
             payload.mode = MODE::HORS_GEL;
             break;
         default:
+            info("[SATELLITE Z%d] Mode inconnu, impossible d'envoyer la consigne.", getNumeroZone());
             return false;
     }
 
-    /*if(_zone.boostActif()) { // TODO Revoir cette zone
+    if(_zone.boostActif()) { // TODO Revoir cette zone
         payload.temperatureConsigne = _zone.getTemperatureConsigne() + _zone.getTemperatureBoost();
-        if(getMode() == MODE::REDUIT_AUTO) {
+    /*    if(getMode() == MODE::REDUIT_AUTO) {
             payload.mode = MODE::CONFORT_DEROGATION;
         } else if(getMode() == MODE::REDUIT_DEROGATION) {
             payload.mode = MODE::CONFORT_AUTO;
@@ -151,16 +153,14 @@ bool Satellite::envoyerConsigne() {
             payload.mode = MODE::CONFORT_PERMANENT;
         } else if(getMode() == MODE::HORS_GEL) {
             return false;
-        }
-    }*/
+        }*/
+    }
     
     size_t length = 0;
     uint16_t err;
 
-    info("[Satellite %d] Envoi de la consigne %0.2f, amb %0.2f.", _zone.getNumeroZone(), _zone.getTemperatureConsigne(), _zone.getTemperatureAmbiante());
-    logRadio(false, (byte*)&payload, sizeof(donneesZones_t));
-    return true; //TODO A SUPPRIMER
-
+    info("[Satellite %d] Envoi de la consigne %0.2f, amb %0.2f, mode %s %d.", _zone.getNumeroZone(), payload.temperatureConsigne.toFloat(), _zone.getTemperatureAmbiante(), _zone.getNomMode(), payload.mode);
+    
     uint8_t retry = 0;
     do {
         length = sizeof(donneesZones_t);
@@ -179,14 +179,14 @@ bool Satellite::envoyerConsigne() {
             (byte*)&donneesZones,
             length
         );
-
-        Date date = donneesZones.date;
-        setDate(date);
         
         if(err != RADIOLIB_ERR_NONE) {
             delay(30);
             continue;
         }
+
+        Date date = donneesZones.date;
+        setDate(date);
         
         return true;
     } while(retry++ < 1);
@@ -286,6 +286,10 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                     return true;
                 }
 
+                if(isnan(_zone.getTemperatureConsigne())) {
+                    _zone.setTemperatureConsigne(donneesSatellite->temperatureConsigne.toFloat());
+                }
+
                 info("[SATELLITE Z%d] Écrasement de données.", getNumeroZone());
 
                 incrementIdMessage(3);
@@ -306,7 +310,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
             return false;
         }
 
-        radio().sendAnswer(getId(), header->idExpediteur, header->idAssociation, header->idMessage, header->idReception, header->type, {}, 0);
+        //radio().sendAnswer(getId(), header->idExpediteur, header->idAssociation, header->idMessage, header->idReception, header->type, {}, 0);
         return true;
     }
 
@@ -314,15 +318,6 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
 }
 
 String Satellite::getNomMode() {
-
-    0b00000000; // Reduit
-    0b00000001; // Confort
-    0b00000010; // Réduit dérog
-    0b00000011; // Confort dérog
-    0b00000100; // Auto réduit
-    0b00000101; // Auto confort
-    0b00010000; // Hors gel
-
     switch(this->getMode()) {
         case MODE::CONFORT_AUTO:
             return "Auto - Confort";

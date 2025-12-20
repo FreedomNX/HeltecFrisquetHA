@@ -102,7 +102,10 @@ void SondeExterieure::begin() {
     // SENSOR: Température extérieure
     _mqttEntities.tempExterieure.id = "temperatureExterieure";
     _mqttEntities.tempExterieure.name = "Température extérieure";
-    _mqttEntities.tempExterieure.component = "number";
+    _mqttEntities.tempExterieure.component = "sensor";
+    if(! getConfig().useDS18B20()) {
+        _mqttEntities.tempExterieure.component = "number";
+    } 
     _mqttEntities.tempExterieure.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "sondeExterieure", "temperatureExterieure"}), 0, true);
     _mqttEntities.tempExterieure.commandTopic = MqttTopic(MqttManager::compose({device->baseTopic,"sondeExterieure","temperatureExterieure","set"}), 0, true);
     _mqttEntities.tempExterieure.set("device_class", "temperature");
