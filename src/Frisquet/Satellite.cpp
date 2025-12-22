@@ -50,6 +50,7 @@ void Satellite::loop() {
     if(firstLoop) {
         firstLoop = false;
         publishMqtt();
+        _zone.publishMqtt();
     }
 
     uint32_t now = millis();
@@ -282,7 +283,9 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 if(! getEcrasement()) {
                     _zone.setTemperatureConsigne(donneesSatellite->temperatureConsigne.toFloat());
                     saveConfig();
+                    _zone.saveConfig();
                     publishMqtt();
+                    _zone.publishMqtt();
                     return true;
                 }
 
@@ -301,7 +304,9 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 }
 
                 saveConfig();
+                _zone.saveConfig();
                 publishMqtt();
+                _zone.publishMqtt();
                 return true;
             }
         }
