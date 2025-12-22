@@ -2,11 +2,14 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <stdarg.h>
-#include <vector>
+#include <cstring>
 #include "Frisquet/NetworkID.h" 
 
 // Déclaration du logger global défini dans Logs.cpp
 extern Logs logs;
+
+static constexpr size_t kMaxQueryLines = 120;
+static Logs::Line s_logLines[kMaxQueryLines];
 
 // Helpers NetworkID <-> String "AA:BB:CC:DD"
 static String networkIdToStr(const NetworkID& id) {
@@ -284,6 +287,9 @@ void Portal::handleGetLogs() {
       limit = (size_t)v;
     }
   }
+  if (limit > kMaxQueryLines) {
+    limit = kMaxQueryLines;
+  }
 
   // ?level=INFO / DEBUG / ERROR / RADIO...
   String level;
@@ -291,23 +297,73 @@ void Portal::handleGetLogs() {
     level = _srv.arg("level");
   }
 
-  std::vector<Logs::Line> lines;
-  logs.getLines(lines, limit, level);
+  size_t outCount = logs.getLines(s_logLines, kMaxQueryLines, limit,
+                                  level.length() > 0 ? level.c_str() : nullptr);
 
-  // On envoie un JSON array ["ligne1","ligne2",...]
-  String json = "[";
+  auto sendEscapedJson = [this](const char* text) {
+    char buffer[128];
+    size_t pos = 0;
+    auto flush = [&]() {
+      if (pos > 0) {
+        buffer[pos] = '\0';
+        _srv.sendContent(buffer);
+        pos = 0;
+      }
+    };
+
+    for (const char* p = text; p && *p; ++p) {
+      const char* esc = nullptr;
+      char unicode[7];
+      switch (*p) {
+        case '\"': esc = "\\\""; break;
+        case '\\': esc = "\\\\"; break;
+        case '\b': esc = "\\b"; break;
+        case '\f': esc = "\\f"; break;
+        case '\n': esc = "\\n"; break;
+        case '\r': esc = "\\r"; break;
+        case '\t': esc = "\\t"; break;
+        default:
+          if (static_cast<uint8_t>(*p) < 0x20) {
+            snprintf(unicode, sizeof(unicode), "\\u%04X", static_cast<uint8_t>(*p));
+            esc = unicode;
+          }
+          break;
+      }
+
+      if (!esc) {
+        if (pos + 1 >= sizeof(buffer)) {
+          flush();
+        }
+        buffer[pos++] = *p;
+      } else {
+        size_t len = strlen(esc);
+        if (pos + len >= sizeof(buffer)) {
+          flush();
+        }
+        memcpy(buffer + pos, esc, len);
+        pos += len;
+      }
+    }
+    flush();
+  };
+
+  _srv.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  _srv.send(200, "application/json; charset=utf-8", "");
+  _srv.sendContent("[");
   bool first = true;
-  for (auto& l : lines) {
-    if (!first) json += ",";
+  for (size_t i = 0; i < outCount; ++i) {
+    if (!first) {
+      _srv.sendContent(",");
+    }
     first = false;
 
-    String s = l.toString();
-    String escaped = jsonEscape(s);
-    json += "\"" + escaped + "\"";
+    char formatted[Logs::kMaxFormattedLen];
+    s_logLines[i].format(formatted, sizeof(formatted));
+    _srv.sendContent("\"");
+    sendEscapedJson(formatted);
+    _srv.sendContent("\"");
   }
-  json += "]";
-
-  _srv.send(200, "application/json; charset=utf-8", json);
+  _srv.sendContent("]");
 }
 
 
