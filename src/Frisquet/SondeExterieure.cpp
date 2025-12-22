@@ -123,6 +123,7 @@ void SondeExterieure::begin() {
                 mqtt().publishState(_mqttEntities.tempExterieure, getTemperatureExterieure());
             }
         });
+    mqtt().registerEntity(*device, _mqttEntities.tempExterieure, true);
 }
 
 void SondeExterieure::loop() {
