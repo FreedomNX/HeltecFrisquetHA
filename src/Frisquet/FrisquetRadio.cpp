@@ -98,7 +98,6 @@ uint16_t FrisquetRadio::sendInit(
     uint16_t err;
 
     do {
-        delay(30);
         logRadio(false, (byte*)payload, sizeof(payload));
         err = this->transmit(payload, sizeof(payload));
         if(err != RADIOLIB_ERR_NONE) {
@@ -109,6 +108,7 @@ uint16_t FrisquetRadio::sendInit(
         if(err == RADIOLIB_ERR_NONE) {
             break;
         }
+        delay(30);
     } while (retry++ < 5);
 
     interruptReceive = false;

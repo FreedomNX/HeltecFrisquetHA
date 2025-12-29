@@ -20,23 +20,23 @@ class Satellite : public FrisquetDevice {
         };
 
         struct MODE_CHAUDIERE {
-            MODE_CHAUDIERE() : fonctionnement(false), arretForce(false) {}
+            MODE_CHAUDIERE() : fonctionnement(false), arretChauffage(false) {}
             MODE_CHAUDIERE(byte mode) {
                 set(mode);
             }
             void set(byte mode) {
                 fonctionnement = (mode & 0b001000) != 0;
-                arretForce = (mode & 0b000100) != 0;
+                arretChauffage = (mode & 0b000100) != 0;
             }
             byte toByte() {
                 byte mode = 0;
                 if(fonctionnement) mode |= 0b001000;
-                if(arretForce) mode |= 0b000100;
+                if(arretChauffage) mode |= 0b000100;
                 return mode;
             }
 
             bool fonctionnement = false;
-            bool arretForce = false;
+            bool arretChauffage = false;
         };
 
         Satellite(FrisquetRadio& radio, Config& cfg, MqttManager& mqtt, Zone& zone) : FrisquetDevice(radio, cfg, mqtt, zone.getIdZone()), _zone(zone) {}
@@ -48,6 +48,7 @@ class Satellite : public FrisquetDevice {
         void publishMqtt();
 
         bool envoyerConsigne();
+        bool envoyerTemperatureAmbiante();
 
         bool onReceive(byte* donnees, size_t length);
 

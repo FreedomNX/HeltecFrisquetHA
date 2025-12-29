@@ -469,6 +469,11 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             if(readBuffer.remainingLength() < sizeof(donneesZone)) { return false; }
             readBuffer.getBytes((byte*)&donneesZone, sizeof(donneesZone));
 
+            if(getZone(header.idExpediteur).getNumeroZone() == 0) {
+                error("[CONNECT] Impossible de mettre à jour la zone %d, numéro de zone invalide.", header.idExpediteur);
+                return false;
+            }
+            
             getZone(header.idExpediteur).setMode((Zone::MODE_ZONE)donneesZone.mode);
             getZone(header.idExpediteur).setModeOptions(donneesZone.modeOptions);
             getZone(header.idExpediteur).setTemperatureReduit(donneesZone.temperatureReduit.toFloat());
@@ -480,10 +485,13 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             }
 
             saveConfig();
+            getZone(header.idExpediteur).publishMqtt();
 
             uint8_t retry = 0;
             uint16_t err;
             
+            info("[CONNECT] Envoi accusé de réception");
+
             do {
                 err = radio().sendAnswer(
                     header.idDestinataire, 
@@ -634,7 +642,7 @@ void Connect::loop() {
             delay(100);
         }
 
-        if (now - _lastEnvoiZone >= 60000 || _lastEnvoiZone == 0) { // 1 minute
+        if (now - _lastEnvoiZone >= 30000 || _lastEnvoiZone == 0) { // 30 secondes
             envoiZone();
         }
     }

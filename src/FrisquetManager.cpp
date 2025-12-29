@@ -136,7 +136,7 @@ void FrisquetManager::initMqtt()
 
 void FrisquetManager::onRadioReceive()
 {
-    FrisquetRadio::interruptReceive = true;
+    //FrisquetRadio::interruptReceive = true;
     FrisquetRadio::receivedFlag = false;
 
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
