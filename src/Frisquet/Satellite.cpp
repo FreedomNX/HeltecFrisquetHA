@@ -42,13 +42,21 @@ void Satellite::begin(bool modeVirtuel) {
         }
         mqtt().publishState(_mqttEntities.ecrasementConsigne, payload);
     });
+
+    // Sensor: Retour fonctionnement chaudière
+    _mqttEntities.etatChaudiere.id = "etatChaudiere";
+    _mqttEntities.etatChaudiere.name = "État chaudière";
+    _mqttEntities.etatChaudiere.component = "sensor";
+    _mqttEntities.etatChaudiere.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "etatChaudiere"}), 0, true);
+    _mqttEntities.etatChaudiere.set("icon", "mdi:tune-variant");
+    mqtt().registerEntity(*device, _mqttEntities.etatChaudiere, true);
 }
 
 void Satellite::loop() {
     
     static bool firstLoop = true;
     if(firstLoop) {
-        firstLoop = false;
+        firstLoop = _modeVirtuel;
         publishMqtt();
         _zone.publishMqtt();
     }
@@ -57,6 +65,12 @@ void Satellite::loop() {
 
     if(! estAssocie() || !_modeVirtuel) {
         return;
+    }
+
+    if(firstLoop) {
+        recupererInfosChaudiere();
+        publishMqtt();
+        firstLoop = false;
     }
 
     if ((_zone.getLastChange() > _zone.getLastEnvoi() && (_zone.getLastChange() + 15000) < now ) || now - _lastEnvoiConsigne >= 600000  ) { // dernier changement ou 10 minutes
@@ -74,6 +88,73 @@ void Satellite::loop() {
 }
 
 void Satellite::publishMqtt() {
+    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("modeEcrasement" + String(getNumeroZone())), getEcrasement() ? "ON" : "OFF");
+    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("etatChaudiere"), _etatChaudiere.getLibelle().c_str());
+}
+
+bool Satellite::recupererInfosChaudiere() {
+    if(! estAssocie() || getNumeroZone() == 0) {
+        return false;
+    }
+
+    struct donneesZones_t {
+        FrisquetRadio::RadioTrameHeader header;
+        uint8_t longueur;
+        temperature16 temperatureExterieure;
+        byte i1[2];
+        uint8_t date[6];  // format reçu "YY MM DD hh mm ss"
+        byte etatChaudiere; // mode chaudière à valider 0X20 Hors gel 0x24 = Hors gel contact sec 0X28 = Fonctionnement
+        uint8_t jourSemaine; // format wday
+        temperature16 temperatureAmbianteZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+        temperature16 temperatureConsigneZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+        byte i2 = 0x00;
+        uint8_t modeZ1 = 0x00;                       // 0x05 auto - 0x06 confort - 0x07 reduit - 0x08 hors gel
+        byte i3[4] = {0x00, 0xC6, 0x00, 0xC6};
+        temperature16 temperatureAmbianteZ2;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+        temperature16 temperatureConsigneZ2;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+        byte i4 = 0x00;
+        uint8_t modeZ2 = 0x00;                       // 0x05 auto - 0x06 confort - 0x07 reduit - 0x08 hors gel
+        byte i5[4] = {0x00, 0x00, 0x00, 0x00};
+        temperature16 temperatureAmbianteZ3;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+        temperature16 temperatureConsigneZ3;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
+        byte i6 = 0x00;
+        uint8_t modeZ3 = 0x00;                       // 0x05 auto - 0x06 confort - 0x07 reduit - 0x08 hors gel
+        byte i7[4] = {0x00, 0x00, 0x00, 0x00};
+    } donneesZones;
+
+    size_t length = 0;
+    uint16_t err;
+
+    info("[Satellite %d] Récupération des informations chaudière.", _zone.getNumeroZone());
+    
+    uint8_t retry = 0;
+    do {
+        length = sizeof(donneesZones_t);
+        err = this->radio().sendAsk(
+            this->getId(), 
+            ID_CHAUDIERE, 
+            this->getIdAssociation(),
+            this->incrementIdMessage(),
+            0x01,
+            0xA029,
+            0x0015,
+            (byte*)&donneesZones,
+            length
+        );
+        
+        if(err != RADIOLIB_ERR_NONE) {
+            delay(30);
+            continue;
+        }
+
+        setEtatChaudiere(donneesZones.etatChaudiere);
+        Date date = donneesZones.date;
+        setDate(date);
+        
+        return true;
+    } while(retry++ < 1);
+
+    return false;
 }
 
 bool Satellite::envoyerTemperatureAmbiante() {
@@ -96,7 +177,7 @@ bool Satellite::envoyerTemperatureAmbiante() {
         temperature16 temperatureExterieure;
         byte i1[2];
         uint8_t date[6];  // format reçu "YY MM DD hh mm ss"
-        byte modeChaudiere; // mode chaudière à valider 0X20 Hors gel 0x24 = Hors gel contact sec 0X28 = Fonctionnement
+        byte etatChaudiere; // mode chaudière à valider 0X20 Hors gel 0x24 = Hors gel contact sec 0X28 = Fonctionnement
         uint8_t jourSemaine; // format wday
         temperature16 temperatureAmbianteZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
         temperature16 temperatureConsigneZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
@@ -147,7 +228,7 @@ bool Satellite::envoyerTemperatureAmbiante() {
             continue;
         }
 
-        setModeChaudiere(donneesZones.modeChaudiere);
+        setEtatChaudiere(donneesZones.etatChaudiere);
         Date date = donneesZones.date;
         setDate(date);
         
@@ -181,7 +262,7 @@ bool Satellite::envoyerConsigne() {
         temperature16 temperatureExterieure;
         byte i1[2];
         uint8_t date[6];  // format reçu "YY MM DD hh mm ss"
-        byte modeChaudiere; // mode chaudière à valider 0X20 Hors gel 0x24 = Hors gel contact sec 0X28 = Fonctionnement
+        byte etatChaudiere; // mode chaudière à valider 0X20 Hors gel 0x24 = Hors gel contact sec 0X28 = Fonctionnement
         uint8_t jourSemaine; // format wday
         temperature16 temperatureAmbianteZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
         temperature16 temperatureConsigneZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
@@ -238,7 +319,7 @@ bool Satellite::envoyerConsigne() {
         }*/
     }
 
-    if(getModeChaudiere().arretChauffage) {
+    if(getEtatChaudiere().arretChauffage) {
         payload.mode = MODE::HORS_GEL;
         payload.temperatureConsigne = isnan(_zone.getTemperatureHorsGel()) ? 8.0f : _zone.getTemperatureHorsGel();
     } 
@@ -272,7 +353,9 @@ bool Satellite::envoyerConsigne() {
             continue;
         }
 
-        setModeChaudiere(donneesZones.modeChaudiere);
+        setEtatChaudiere(donneesZones.etatChaudiere);
+        debug("[SATELLITE Z%d] Retour état chaudière : 0x%02X", getNumeroZone(), donneesZones.etatChaudiere);
+        debug("[SATELLITE Z%d] Retour état chaudière : %s", getNumeroZone(), getEtatChaudiere().getLibelle().c_str());
         Date date = donneesZones.date;
         setDate(date);
         
@@ -335,7 +418,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                         temperature16 temperatureExterieure;
                         byte i1[2];
                         uint8_t date[6];  // format reçu "YY MM DD hh mm ss"
-                        byte modeChaudiere; // mode chaudière à valider
+                        byte etatChaudiere; // mode chaudière à valider
                         uint8_t jourSemaine; // format wday
                         temperature16 temperatureAmbianteZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
                         temperature16 temperatureConsigneZ1;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
@@ -358,6 +441,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                         return false;
                     }
 
+                    setEtatChaudiere(donneesZones->etatChaudiere);
                     Date date = donneesZones->date;
                     setDate(date);
                 }

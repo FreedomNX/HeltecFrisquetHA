@@ -261,6 +261,7 @@ void Zone::begin() {
         saveConfig();
         refreshLastChange();
         mqtt().publishState(_mqttEntities.boost, payload);
+        mqtt().publishState(_mqttEntities.mode, getNomMode());
     });
 
 
