@@ -14,7 +14,8 @@ uint16_t FrisquetRadio::sendAsk(
     fword adresseMemoire,
     fword tailleMemoire,
     byte* donneesReception,
-    size_t& length
+    size_t& length,
+    uint8_t retry
 ) {
     
     struct {
@@ -35,7 +36,7 @@ uint16_t FrisquetRadio::sendAsk(
     memcpy(payload, &trame, sizeof(payload));
     
     interruptReceive = true;
-    uint8_t retry = 0;
+    uint8_t attempts = retry;
     uint16_t err;
     do {
         delay(30);
@@ -45,11 +46,11 @@ uint16_t FrisquetRadio::sendAsk(
             continue;
         }
 
-        err = this->receiveExpected(idDestinataire, idExpediteur, idAssociation, idMessage, idReception|0x80, FrisquetRadio::MessageType::READ, donneesReception, length);
+        err = this->receiveExpected(idDestinataire, idExpediteur, idAssociation, idMessage, idReception|0x80, FrisquetRadio::MessageType::READ, donneesReception, length, retry);
         if(err == RADIOLIB_ERR_NONE) {
             break;
         }
-    } while (retry++ < 5);
+    } while (--attempts > 0);
 
     interruptReceive = false;
     startReceive();
@@ -214,7 +215,7 @@ uint16_t FrisquetRadio::receiveExpected(
         } else {
             err = RADIOLIB_ERR_RX_TIMEOUT;
         }
-    } while (retry-- > 0);
+    } while (--retry > 0);
 
 
     interruptReceive = false;

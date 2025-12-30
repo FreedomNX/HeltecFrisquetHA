@@ -19,6 +19,22 @@ static String networkIdToStr(const NetworkID& id) {
   return String(buf);
 }
 
+static bool parseUint16Hex(const String& input, uint16_t& out) {
+  String s = input;
+  s.trim();
+  if (s.length() == 0) {
+    return false;
+  }
+
+  char* end = nullptr;
+  unsigned long value = strtoul(s.c_str(), &end, 16);
+  if (!end || *end != '\0' || value > 0xFFFFUL) {
+    return false;
+  }
+  out = static_cast<uint16_t>(value);
+  return true;
+}
+
 static bool parseNetworkIdFromString(const String& s, NetworkID& out) {
   String hex = s;
   hex.trim();
@@ -100,6 +116,8 @@ void Portal::begin(bool startApFallbackIfNoWifi) {
   _srv.on("/logs", HTTP_GET, [this]{ handleLogsPage(); });
   _srv.on("/api/status", HTTP_GET, [this]{ handleStatus(); });
   _srv.on("/logs-radio", HTTP_GET, [this]{ handleRadioLogsPage(); });
+  _srv.on("/api/memory", HTTP_GET, [this]{ handleMemoryRead(); });
+  _srv.on("/memory", HTTP_GET, [this]{ handleMemoryPage(); });
   _srv.on("/api/radio/send", HTTP_POST, [this]{ handleSendRadio(); });
   _srv.on("/api/connect/pair", HTTP_POST, [this]{ handlePairConnect(); });
   _srv.on("/api/sonde-ext/pair", HTTP_POST, [this]{ handlePairSondeExt(); });
@@ -447,6 +465,146 @@ void Portal::handleSendRadio() {
 
 void Portal::handleRadioLogsPage() {
   _srv.send(200, "text/html; charset=utf-8", logsRadioHtml());
+}
+
+void Portal::handleMemoryRead() {
+  if (_srv.method() != HTTP_GET) {
+    _srv.send(405, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Méthode non autorisée\"}");
+    return;
+  }
+
+  if (!_frisquetManager.connect().estAssocie()) {
+    _srv.send(400, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Connect non associé\"}");
+    return;
+  }
+
+  uint16_t start = 0;
+  uint16_t len = 16;
+
+  if (_srv.hasArg("start")) {
+    if (!parseUint16Hex(_srv.arg("start"), start)) {
+      _srv.send(400, "application/json; charset=utf-8",
+                "{\"ok\":false,\"err\":\"Paramètre start invalide\"}");
+      return;
+    }
+  }
+
+  if (_srv.hasArg("len")) {
+    char* end = nullptr;
+    unsigned long v = strtoul(_srv.arg("len").c_str(), &end, 10);
+    if (!end || *end != '\0' || v == 0 || v > 256) {
+      _srv.send(400, "application/json; charset=utf-8",
+                "{\"ok\":false,\"err\":\"Paramètre len invalide (1..256)\"}");
+      return;
+    }
+    len = static_cast<uint16_t>(v);
+  }
+
+  if (start > 0xFFFF - (len - 1)) {
+    len = static_cast<uint16_t>(0xFFFF - start + 1);
+  }
+
+  uint16_t errorAddrs[256];
+  uint16_t errorCodes[256];
+  size_t errorCount = 0;
+
+  auto sendUInt = [this](unsigned long v) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%lu", v);
+    _srv.sendContent(buf);
+  };
+
+  auto sendHex2 = [this](uint8_t v) {
+    char buf[3];
+    snprintf(buf, sizeof(buf), "%02X", v);
+    _srv.sendContent(buf);
+  };
+
+  auto sendHex4 = [this](uint16_t v) {
+    char buf[5];
+    snprintf(buf, sizeof(buf), "%04X", v);
+    _srv.sendContent(buf);
+  };
+
+  _srv.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  _srv.send(200, "application/json; charset=utf-8", "");
+  _srv.sendContent("{\"ok\":true,\"start\":");
+  sendUInt(start);
+  _srv.sendContent(",\"startHex\":\"");
+  sendHex4(start);
+  _srv.sendContent("\",\"len\":");
+  sendUInt(len);
+  _srv.sendContent(",\"words\":[");
+
+  for (uint16_t i = 0; i < len; ++i) {
+    uint16_t addr = static_cast<uint16_t>(start + i);
+    byte resp[32];
+    size_t respLen = sizeof(resp);
+
+    uint16_t err = _frisquetManager.radio().sendAsk(
+        ID_CONNECT,
+        ID_CHAUDIERE,
+        _frisquetManager.connect().getIdAssociation(),
+        0x01,
+        0x01,
+        addr,
+        0x0002,
+        resp,
+        respLen,
+      1);
+
+    int value = -1;
+    if (err == RADIOLIB_ERR_NONE) {
+      size_t headerSize = sizeof(FrisquetRadio::RadioTrameHeader);
+      if (respLen > headerSize) {
+        uint8_t dataLen = resp[headerSize];
+        if (dataLen >= 2 && respLen >= headerSize + 1 + dataLen) {
+          uint8_t b1 = resp[headerSize + 1];
+          uint8_t b2 = resp[headerSize + 2];
+          value = (static_cast<int>(b1) << 8) | static_cast<int>(b2);
+        } else if (respLen >= headerSize + 3) {
+          uint8_t b1 = resp[respLen - 2];
+          uint8_t b2 = resp[respLen - 1];
+          value = (static_cast<int>(b1) << 8) | static_cast<int>(b2);
+        }
+      }
+    }
+
+    if (i > 0) {
+      _srv.sendContent(",");
+    }
+    _srv.sendContent("\"");
+    if (value >= 0) {
+      sendHex4(static_cast<uint16_t>(value));
+    } else {
+      _srv.sendContent("??");
+      if (errorCount < 256) {
+        errorAddrs[errorCount] = addr;
+        errorCodes[errorCount] = err == RADIOLIB_ERR_NONE ? 1 : err;
+        ++errorCount;
+      }
+    }
+    _srv.sendContent("\"");
+  }
+
+  _srv.sendContent("],\"errors\":[");
+  for (size_t i = 0; i < errorCount; ++i) {
+    if (i > 0) {
+      _srv.sendContent(",");
+    }
+    _srv.sendContent("{\"addr\":\"");
+    sendHex4(errorAddrs[i]);
+    _srv.sendContent("\",\"err\":");
+    sendUInt(errorCodes[i]);
+    _srv.sendContent("}");
+  }
+  _srv.sendContent("]}");
+}
+
+void Portal::handleMemoryPage() {
+  _srv.send(200, "text/html; charset=utf-8", memoryHtml());
 }
 
 void Portal::handlePairConnect() {
@@ -927,6 +1085,7 @@ String Portal::html() {
           <button class='btn' type='button' id='btnReboot'>Redémarrer</button>
           <a class='btn' href='/logs'>Voir les logs</a>
           <a class='btn' href='/logs-radio'>Trames radio</a>
+          <a class='btn' href='/memory'>Mémoire chaudière</a>
         </div>
 
 
@@ -1431,6 +1590,199 @@ document.addEventListener("DOMContentLoaded", ()=>{
   reload();
   updateRefreshTimer();
 });
+</script>
+
+</body></html>
+)HTML";
+}
+
+
+String Portal::memoryHtml() {
+  return R"HTML(
+<!DOCTYPE html><html lang='fr'><head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Frisquet – Mémoire chaudière</title>
+<style>
+  :root{
+    --bg:#0f1115;--card:#171a21;--muted:#8a8f98;--txt:#e7e9ee;
+    --acc:#3aa3ff;--bd:#2a2f39;--ok:#1fb86a;--warn:#ffb020
+  }
+  *,*:before,*:after{box-sizing:border-box}
+  body{
+    margin:0;padding:24px;background:var(--bg);color:var(--txt);
+    font:15px/1.45 system-ui,Segoe UI,Roboto,Arial
+  }
+  a{color:var(--acc);text-decoration:none}
+  h1,h2{margin:0 0 12px}
+  .wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
+  .card{
+    background:var(--card);border:1px solid var(--bd);border-radius:12px;
+    padding:18px;box-shadow:0 4px 16px rgba(0,0,0,.2)
+  }
+  .toolbar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    margin:8px 0 12px
+  }
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:999px;border:1px solid var(--bd);
+    background:#10131a;font-size:13px
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px solid var(--bd);background:#0d1016;color:var(--txt);
+    padding:10px 14px;border-radius:10px;cursor:pointer;
+    text-decoration:none
+  }
+  .btn.primary{
+    background:var(--acc);color:#061019;border-color:transparent;
+    font-weight:700
+  }
+  label{
+    color:var(--muted);font-weight:600;font-size:13px;
+    display:flex;align-items:center;gap:6px
+  }
+  input[type=text],input[type=number],select{
+    padding:8px 10px;border:1px solid var(--bd);border-radius:10px;
+    background:#0d1016;color:var(--txt)
+  }
+  pre{
+    white-space:pre;background:#0b0e13;color:#e6e6e6;
+    padding:12px;border-radius:10px;max-height:70vh;overflow:auto;
+    margin:0;font-family:ui-monospace,Menlo,Consolas,monospace
+  }
+  .muted{color:var(--muted)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .topnav{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .msg{
+    margin-top:10px;padding:10px 12px;border-radius:10px;
+    background:#0b0e13;border:1px solid var(--bd);display:none
+  }
+  .msg.show{display:block}
+  .msg.ok{border-color:var(--ok);color:var(--ok)}
+  .msg.err{border-color:#ff5a5a;color:#ff8a8a}
+</style>
+</head><body>
+<div class='wrap'>
+
+  <div class='topnav'>
+    <a href='/' class='btn'>&larr;&nbsp;Retour</a>
+    <span class='badge'>Frisquet – Mémoire chaudière</span>
+  </div>
+
+  <div class='card'>
+    <div class='toolbar'>
+      <label>Adresse (hex)
+        <input id='start' type='text' value='0000' size='6'>
+      </label>
+      <label>Longueur (mots 16-bit)
+        <input id='len' type='number' min='1' max='256' value='64'>
+      </label>
+      <label>
+        <input id='auto' type='checkbox'>
+        Auto +len
+      </label>
+      <label>Intervalle
+        <select id='refresh'>
+          <option value='0'>Off</option>
+          <option value='500'>500 ms</option>
+          <option value='1000'>1s</option>
+          <option value='2000'>2s</option>
+          <option value='5000'>5s</option>
+        </select>
+      </label>
+      <button class='btn primary' id='btnRead'>Lire</button>
+      <button class='btn' id='btnStop'>Stop</button>
+    </div>
+    <div class='row muted'>
+      Utilise l'association Connect pour interroger la mémoire chaudière.
+    </div>
+    <pre id='dump'>(aucune donnée)</pre>
+    <div id='msg' class='msg'></div>
+  </div>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const dump = $("#dump");
+const msg = $("#msg");
+const inpStart = $("#start");
+const inpLen = $("#len");
+const cbAuto = $("#auto");
+const selRef = $("#refresh");
+const btnRead = $("#btnRead");
+const btnStop = $("#btnStop");
+let timer = null;
+
+function toHex(n, w){
+  return n.toString(16).toUpperCase().padStart(w, "0");
+}
+
+function showMsg(text, ok){
+  if(!msg) return;
+  msg.textContent = text;
+  msg.className = "msg show " + (ok ? "ok" : "err");
+}
+
+function renderDump(startHex, words){
+  if(!words || !words.length){
+    dump.textContent = "(aucune donnée)";
+    return;
+  }
+  const start = parseInt(startHex, 16) || 0;
+  const lines = [];
+  for(let i=0; i<words.length; i+=8){
+    const addr = start + i;
+    const chunk = words.slice(i, i+8).map(w => w === "??" ? "??" : w);
+    lines.push(toHex(addr,4) + ": " + chunk.join(" "));
+  }
+  dump.textContent = lines.join("\n");
+}
+
+async function readOnce(){
+  const start = (inpStart.value || "0000").trim();
+  const len = parseInt(inpLen.value || "16", 10);
+  const qs = "?start=" + encodeURIComponent(start) +
+             "&len=" + encodeURIComponent(len) +
+             "&_=" + Date.now();
+  try{
+    const r = await fetch("/api/memory" + qs, { cache:"no-store" });
+    const j = await r.json();
+    if(!j.ok){
+      showMsg(j.err || "Erreur lecture", false);
+      return;
+    }
+    renderDump(j.startHex || start, j.words || []);
+    if(j.errors && j.errors.length){
+      showMsg("Lecture partielle: " + j.errors.length + " erreurs.", false);
+    } else {
+      showMsg("Lecture OK (" + (j.words ? j.words.length : 0) + " mots).", true);
+    }
+    if(cbAuto.checked && j.startHex && j.words){
+      const next = (parseInt(j.startHex,16) + j.words.length) & 0xFFFF;
+      inpStart.value = toHex(next, 4);
+    }
+  }catch(e){
+    showMsg("Erreur réseau: " + e, false);
+  }
+}
+
+function updateTimer(){
+  if(timer){ clearInterval(timer); timer = null; }
+  const v = parseInt(selRef.value || "0", 10);
+  if(v > 0){
+    timer = setInterval(readOnce, v);
+  }
+}
+
+btnRead.addEventListener("click", readOnce);
+btnStop.addEventListener("click", ()=>{
+  selRef.value = "0";
+  updateTimer();
+});
+selRef.addEventListener("change", updateTimer);
 </script>
 
 </body></html>

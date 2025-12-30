@@ -33,6 +33,8 @@ private:
   void handleGetLogs();          // GET /api/logs
   void handleLogsPage();         // GET /logs
   void handleClearLogs();        // GET /logs/clear
+  void handleMemoryRead();       // GET /api/memory
+  void handleMemoryPage();       // GET /memory
   void handleStatus();
   void handleRadioLogsPage();
   void handleSendRadio();
@@ -46,6 +48,7 @@ private:
   // Utils
   static String html();
   static String logsHtml();
+  static String memoryHtml();
   String logsRadioHtml();
   void scheduleReboot(uint32_t delayMs = 800);
   bool hexStringToBufferRaw(const String& hex, uint8_t* buffer, size_t maxLen, size_t& outLen);

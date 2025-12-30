@@ -56,7 +56,8 @@ class FrisquetRadio : public Radio {
         fword adresseMemoire,
         fword tailleMemoire,
         byte* donneesReception,
-        size_t& length
+        size_t& length,
+        uint8_t retry = 5
     );
 
     uint16_t sendInit(
