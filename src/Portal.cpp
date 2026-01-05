@@ -3,6 +3,7 @@
 #include <ESPmDNS.h>
 #include <stdarg.h>
 #include <cstring>
+#include <esp_system.h>
 #include "Frisquet/NetworkID.h" 
 
 // Déclaration du logger global défini dans Logs.cpp
@@ -10,6 +11,8 @@ extern Logs logs;
 
 static constexpr size_t kMaxQueryLines = 120;
 static Logs::Line s_logLines[kMaxQueryLines];
+static volatile bool s_logsBusy = false;
+static uint8_t s_memoryMessageId = 0x10;
 
 // Helpers NetworkID <-> String "AA:BB:CC:DD"
 static String networkIdToStr(const NetworkID& id) {
@@ -57,6 +60,23 @@ static bool parseNetworkIdFromString(const String& s, NetworkID& out) {
 
   out = NetworkID(b[0], b[1], b[2], b[3]);
   return true;
+}
+
+static const char* resetReasonToString(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_UNKNOWN: return "UNKNOWN";
+    case ESP_RST_POWERON: return "POWERON";
+    case ESP_RST_EXT: return "EXT";
+    case ESP_RST_SW: return "SW";
+    case ESP_RST_PANIC: return "PANIC";
+    case ESP_RST_INT_WDT: return "INT_WDT";
+    case ESP_RST_TASK_WDT: return "TASK_WDT";
+    case ESP_RST_WDT: return "WDT";
+    case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+    case ESP_RST_BROWNOUT: return "BROWNOUT";
+    case ESP_RST_SDIO: return "SDIO";
+    default: return "UNKNOWN";
+  }
 }
 
 static String jsonEscape(const String& s) {
@@ -117,6 +137,7 @@ void Portal::begin(bool startApFallbackIfNoWifi) {
   _srv.on("/api/status", HTTP_GET, [this]{ handleStatus(); });
   _srv.on("/logs-radio", HTTP_GET, [this]{ handleRadioLogsPage(); });
   _srv.on("/api/memory", HTTP_GET, [this]{ handleMemoryRead(); });
+  _srv.on("/api/memory/scan", HTTP_GET, [this]{ handleMemoryScan(); });
   _srv.on("/memory", HTTP_GET, [this]{ handleMemoryPage(); });
   _srv.on("/api/radio/send", HTTP_POST, [this]{ handleSendRadio(); });
   _srv.on("/api/connect/pair", HTTP_POST, [this]{ handlePairConnect(); });
@@ -297,6 +318,16 @@ void Portal::handleReboot() {
 }
 
 void Portal::handleGetLogs() {
+  if (s_logsBusy) {
+    _srv.send(429, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Busy\"}");
+    return;
+  }
+  s_logsBusy = true;
+  struct BusyGuard {
+    ~BusyGuard() { s_logsBusy = false; }
+  } guard;
+
   // ?limit=100 (par défaut)
   size_t limit = 100;
   if (_srv.hasArg("limit")) {
@@ -396,13 +427,22 @@ void Portal::handleStatus() {
   IPAddress ip = WiFi.localIP();
   String ssid = sta ? WiFi.SSID() : "";
   long rssi   = sta ? WiFi.RSSI() : 0;
+  uint32_t upMs = millis();
+  const char* resetReason = resetReasonToString(esp_reset_reason());
+  uint32_t freeHeap = ESP.getFreeHeap();
+  uint32_t minFreeHeap = ESP.getMinFreeHeap();
 
   String json = "{";
   json += "\"apRunning\":"     + String(ap  ? "true" : "false") + ",";
   json += "\"staConnected\":"  + String(sta ? "true" : "false") + ",";
   json += "\"ssid\":\""        + ssid + "\",";
   json += "\"ip\":\""          + ip.toString() + "\",";
-  json += "\"rssi\":"          + String(rssi);
+  json += "\"rssi\":"          + String(rssi) + ",";
+  json += "\"uptimeMs\":"      + String(upMs) + ",";
+  json += "\"uptimeSec\":"     + String(upMs / 1000) + ",";
+  json += "\"resetReason\":\"" + jsonEscape(String(resetReason)) + "\",";
+  json += "\"freeHeap\":"      + String(freeHeap) + ",";
+  json += "\"minFreeHeap\":"   + String(minFreeHeap);
   json += "}";
   _srv.send(200, "application/json; charset=utf-8", json);
 }
@@ -507,12 +547,18 @@ void Portal::handleMemoryRead() {
   }
 
   uint16_t errorAddrs[256];
-  uint16_t errorCodes[256];
+  int16_t errorCodes[256];
   size_t errorCount = 0;
 
   auto sendUInt = [this](unsigned long v) {
     char buf[16];
     snprintf(buf, sizeof(buf), "%lu", v);
+    _srv.sendContent(buf);
+  };
+
+  auto sendInt = [this](long v) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%ld", v);
     _srv.sendContent(buf);
   };
 
@@ -543,17 +589,17 @@ void Portal::handleMemoryRead() {
     byte resp[32];
     size_t respLen = sizeof(resp);
 
-    uint16_t err = _frisquetManager.radio().sendAsk(
+    int16_t err = _frisquetManager.radio().sendAsk(
         ID_CONNECT,
         ID_CHAUDIERE,
         _frisquetManager.connect().getIdAssociation(),
-        0x01,
+        ++s_memoryMessageId,
         0x01,
         addr,
-        0x0002,
+        0x0001,
         resp,
         respLen,
-      1);
+      5);
 
     int value = -1;
     if (err == RADIOLIB_ERR_NONE) {
@@ -597,10 +643,146 @@ void Portal::handleMemoryRead() {
     _srv.sendContent("{\"addr\":\"");
     sendHex4(errorAddrs[i]);
     _srv.sendContent("\",\"err\":");
-    sendUInt(errorCodes[i]);
+    sendInt(errorCodes[i]);
     _srv.sendContent("}");
   }
   _srv.sendContent("]}");
+}
+
+void Portal::handleMemoryScan() {
+  if (_srv.method() != HTTP_GET) {
+    _srv.send(405, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Méthode non autorisée\"}");
+    return;
+  }
+
+  if (!_frisquetManager.connect().estAssocie()) {
+    _srv.send(400, "application/json; charset=utf-8",
+              "{\"ok\":false,\"err\":\"Connect non associé\"}");
+    return;
+  }
+
+  uint16_t start = 0;
+  uint16_t maxScan = 128;
+  uint16_t step = 1;
+  bool stopOnValid = true;
+
+  if (_srv.hasArg("start")) {
+    if (!parseUint16Hex(_srv.arg("start"), start)) {
+      _srv.send(400, "application/json; charset=utf-8",
+                "{\"ok\":false,\"err\":\"Paramètre start invalide\"}");
+      return;
+    }
+  }
+
+  if (_srv.hasArg("max")) {
+    char* end = nullptr;
+    unsigned long v = strtoul(_srv.arg("max").c_str(), &end, 10);
+    if (!end || *end != '\0' || v == 0 || v > 512) {
+      _srv.send(400, "application/json; charset=utf-8",
+                "{\"ok\":false,\"err\":\"Paramètre max invalide (1..512)\"}");
+      return;
+    }
+    maxScan = static_cast<uint16_t>(v);
+  }
+
+  if (_srv.hasArg("step")) {
+    char* end = nullptr;
+    unsigned long v = strtoul(_srv.arg("step").c_str(), &end, 10);
+    if (!end || *end != '\0' || v == 0 || v > 256) {
+      _srv.send(400, "application/json; charset=utf-8",
+                "{\"ok\":false,\"err\":\"Paramètre step invalide (1..256)\"}");
+      return;
+    }
+    step = static_cast<uint16_t>(v);
+  }
+
+  if (_srv.hasArg("stopOnValid")) {
+    stopOnValid = parseBoolArg(_srv.arg("stopOnValid"), true);
+  }
+
+  uint16_t foundAddr = 0;
+  uint16_t foundValue = 0;
+  bool found = false;
+  int16_t lastErr = 0;
+  uint16_t scanned = 0;
+
+   uint8_t idExpediteur = 0x00;
+   uint8_t idAssociation = 0x00;
+    if(_frisquetManager.config().useConnect() && _frisquetManager.connect().estAssocie()) {
+      idExpediteur = ID_CONNECT;
+      idAssociation = _frisquetManager.connect().getIdAssociation();
+    } else if(_frisquetManager.config().useSatelliteZ1() && _frisquetManager.satelliteZ1().estAssocie()) {
+      idExpediteur = ID_ZONE_1;
+      idAssociation = _frisquetManager.satelliteZ1().getIdAssociation();
+    }
+    if(idExpediteur == 0x00) {
+      _srv.send(400, "application/json; charset=utf-8",
+                "{\"ok\":false,\"err\":\"Aucun module émetteur associé (Connect ou Satellite Z1)\"}");
+      return;
+    }
+
+  for (uint16_t i = 0; i < maxScan; ++i) {
+    uint16_t addr = static_cast<uint16_t>(start + (i * step));
+    byte resp[32];
+    size_t respLen = sizeof(resp);
+
+    int16_t err = _frisquetManager.radio().sendAsk(
+        idExpediteur,
+        ID_CHAUDIERE,
+        idAssociation,
+        ++s_memoryMessageId,
+        0x01,
+        addr,
+        0x0001,
+        resp,
+        respLen,
+        5);
+
+    ++scanned;
+    if (err != RADIOLIB_ERR_NONE) {
+      lastErr = err;
+      continue;
+    }
+
+    if (respLen >= sizeof(FrisquetRadio::RadioTrameHeader)) {
+      FrisquetRadio::RadioTrameHeader header;
+      memcpy(&header, resp, sizeof(header));
+      if (header.type == FrisquetRadio::MessageType::READ) {
+        size_t headerSize = sizeof(FrisquetRadio::RadioTrameHeader);
+        if (respLen >= headerSize + 3) {
+          uint8_t b1 = resp[headerSize + 1];
+          uint8_t b2 = resp[headerSize + 2];
+          foundValue = (static_cast<uint16_t>(b1) << 8) | b2;
+        } else {
+          foundValue = 0;
+        }
+        foundAddr = addr;
+        found = true;
+        if (stopOnValid) {
+          break;
+        }
+      }
+    }
+  }
+
+  String json = "{";
+  json += "\"ok\":true,";
+  char startBuf[5];
+  snprintf(startBuf, sizeof(startBuf), "%04X", start);
+  json += "\"startHex\":\"" + String(startBuf) + "\",";
+  json += "\"scanned\":" + String(scanned) + ",";
+  json += "\"found\":" + String(found ? "true" : "false") + ",";
+  if (found) {
+    char buf[5];
+    snprintf(buf, sizeof(buf), "%04X", foundAddr);
+    json += "\"addr\":\"" + String(buf) + "\",";
+    snprintf(buf, sizeof(buf), "%04X", foundValue);
+    json += "\"value\":\"" + String(buf) + "\",";
+  }
+  json += "\"lastErr\":" + String(lastErr);
+  json += "}";
+  _srv.send(200, "application/json; charset=utf-8", json);
 }
 
 void Portal::handleMemoryPage() {
@@ -1104,6 +1286,22 @@ String Portal::html() {
           <span>Station Wi-Fi&nbsp;:</span>
           <span id='badgeSta' class='warn'>inconnu</span>
         </span>
+        <span class='badge'>
+          <span>Uptime&nbsp;:</span>
+          <span id='badgeUptime' class='warn'>inconnu</span>
+        </span>
+        <span class='badge'>
+          <span>Reset&nbsp;:</span>
+          <span id='badgeReset' class='warn'>inconnu</span>
+        </span>
+        <span class='badge'>
+          <span>Heap&nbsp;:</span>
+          <span id='badgeHeap' class='warn'>inconnu</span>
+        </span>
+        <span class='badge'>
+          <span>Min heap&nbsp;:</span>
+          <span id='badgeMinHeap' class='warn'>inconnu</span>
+        </span>
       </div>
       <div class='row' style='margin-top:8px'>
         <div class='hint'>
@@ -1237,6 +1435,20 @@ function setBadge(id, ok, text) {
   el.className = ok ? "ok" : "warn";
 }
 
+function formatUptime(sec) {
+  const total = Math.max(0, Number(sec || 0));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  const secs = Math.floor(total % 60);
+  let out = "";
+  if (days > 0) out += days + "d ";
+  out += String(hours).padStart(2, "0") + ":" +
+         String(mins).padStart(2, "0") + ":" +
+         String(secs).padStart(2, "0");
+  return out;
+}
+
 async function loadStatus() {
   try {
     const r = await fetch("/api/status", { cache: "no-store" });
@@ -1257,9 +1469,25 @@ async function loadStatus() {
       staText = "déconnectée";
     }
     setBadge("badgeSta", j.staConnected, staText);
+    setBadge("badgeUptime", true, formatUptime(j.uptimeSec));
+    setBadge("badgeReset", true, j.resetReason || "inconnu");
+    if (typeof j.freeHeap === "number") {
+      setBadge("badgeHeap", true, j.freeHeap + " o");
+    } else {
+      setBadge("badgeHeap", false, "indisponible");
+    }
+    if (typeof j.minFreeHeap === "number") {
+      setBadge("badgeMinHeap", true, j.minFreeHeap + " o");
+    } else {
+      setBadge("badgeMinHeap", false, "indisponible");
+    }
   } catch (e) {
     setBadge("badgeAp", false, "indisponible");
     setBadge("badgeSta", false, "indisponible");
+    setBadge("badgeUptime", false, "indisponible");
+    setBadge("badgeReset", false, "indisponible");
+    setBadge("badgeHeap", false, "indisponible");
+    setBadge("badgeMinHeap", false, "indisponible");
   }
 }
 
@@ -1679,9 +1907,23 @@ String Portal::memoryHtml() {
       <label>Longueur (mots 16-bit)
         <input id='len' type='number' min='1' max='256' value='64'>
       </label>
+      <label>Scan max
+        <input id='scanMax' type='number' min='1' max='512' value='128'>
+      </label>
+      <label>Scan pas
+        <input id='scanStep' type='number' min='1' max='256' value='1'>
+      </label>
       <label>
         <input id='auto' type='checkbox'>
         Auto +len
+      </label>
+      <label>
+        <input id='scanStop' type='checkbox' checked>
+        Stop à la 1re zone valide
+      </label>
+      <label>
+        <input id='scanAuto' type='checkbox' checked>
+        Auto +scan
       </label>
       <label>Intervalle
         <select id='refresh'>
@@ -1693,6 +1935,7 @@ String Portal::memoryHtml() {
         </select>
       </label>
       <button class='btn primary' id='btnRead'>Lire</button>
+      <button class='btn' id='btnScan'>Scanner</button>
       <button class='btn' id='btnStop'>Stop</button>
     </div>
     <div class='row muted'>
@@ -1710,9 +1953,14 @@ const dump = $("#dump");
 const msg = $("#msg");
 const inpStart = $("#start");
 const inpLen = $("#len");
+const inpScanMax = $("#scanMax");
+const inpScanStep = $("#scanStep");
+const cbScanStop = $("#scanStop");
+const cbScanAuto = $("#scanAuto");
 const cbAuto = $("#auto");
 const selRef = $("#refresh");
 const btnRead = $("#btnRead");
+const btnScan = $("#btnScan");
 const btnStop = $("#btnStop");
 let timer = null;
 
@@ -1769,6 +2017,40 @@ async function readOnce(){
   }
 }
 
+async function scanOnce(){
+  const start = (inpStart.value || "0000").trim();
+  const max = parseInt(inpScanMax.value || "128", 10);
+  const step = parseInt(inpScanStep.value || "1", 10);
+  const stopOnValid = cbScanStop.checked ? "true" : "false";
+  const qs = "?start=" + encodeURIComponent(start) +
+             "&max=" + encodeURIComponent(max) +
+             "&step=" + encodeURIComponent(step) +
+             "&stopOnValid=" + encodeURIComponent(stopOnValid) +
+             "&_=" + Date.now();
+  try{
+    const r = await fetch("/api/memory/scan" + qs, { cache:"no-store" });
+    const j = await r.json();
+    if(!j.ok){
+      showMsg(j.err || "Erreur scan", false);
+      return;
+    }
+    if(j.found){
+      showMsg("Zone valide: " + j.addr + " = " + j.value + " (scan " + j.scanned + ")", true);
+      inpStart.value = j.addr;
+      readOnce();
+    } else {
+      showMsg("Aucune zone valide (scan " + j.scanned + ")", false);
+    }
+    if(cbScanAuto.checked && !j.found){
+      const base = parseInt(start, 16) || 0;
+      const next = (base + (j.scanned * step)) & 0xFFFF;
+      inpStart.value = toHex(next, 4);
+    }
+  }catch(e){
+    showMsg("Erreur réseau: " + e, false);
+  }
+}
+
 function updateTimer(){
   if(timer){ clearInterval(timer); timer = null; }
   const v = parseInt(selRef.value || "0", 10);
@@ -1778,6 +2060,7 @@ function updateTimer(){
 }
 
 btnRead.addEventListener("click", readOnce);
+btnScan.addEventListener("click", scanOnce);
 btnStop.addEventListener("click", ()=>{
   selRef.value = "0";
   updateTimer();

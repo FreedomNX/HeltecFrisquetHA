@@ -47,7 +47,7 @@ class FrisquetRadio : public Radio {
         uint8_t longueurDonneesEcriture;
     };
 
-    uint16_t sendAsk(
+    int16_t sendAsk(
         uint8_t idExpediteur, 
         uint8_t idDestinataire, 
         uint8_t idAssociation, 
@@ -60,7 +60,7 @@ class FrisquetRadio : public Radio {
         uint8_t retry = 5
     );
 
-    uint16_t sendInit(
+    int16_t sendInit(
         uint8_t idExpediteur, 
         uint8_t idDestinataire, 
         uint8_t idAssociation, 
@@ -76,7 +76,7 @@ class FrisquetRadio : public Radio {
         size_t& length
     );
 
-    uint16_t sendAnswer(
+    int16_t sendAnswer(
         uint8_t idExpediteur, 
         uint8_t idDestinataire, 
         uint8_t idAssociation, 
@@ -87,7 +87,7 @@ class FrisquetRadio : public Radio {
         uint8_t longueurDonnees
     );
     
-    uint16_t receiveExpected(
+    int16_t receiveExpected(
             uint8_t idExpediteur, 
             uint8_t idDestinataire, 
             uint8_t idAssociation, 

@@ -43,20 +43,22 @@ void Satellite::begin(bool modeVirtuel) {
         mqtt().publishState(_mqttEntities.ecrasementConsigne, payload);
     });
 
-    // Sensor: Retour fonctionnement chaudière
-    _mqttEntities.etatChaudiere.id = "etatChaudiere";
-    _mqttEntities.etatChaudiere.name = "État chaudière";
-    _mqttEntities.etatChaudiere.component = "sensor";
-    _mqttEntities.etatChaudiere.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "etatChaudiere"}), 0, true);
-    _mqttEntities.etatChaudiere.set("icon", "mdi:tune-variant");
-    mqtt().registerEntity(*device, _mqttEntities.etatChaudiere, true);
+    if(this->getId() == ID_ZONE_1) { // Seulement sur Z1 (leader)
+        // Sensor: Retour fonctionnement chaudière
+        _mqttEntities.etatChaudiere.id = "etatChaudiere";
+        _mqttEntities.etatChaudiere.name = "État chaudière";
+        _mqttEntities.etatChaudiere.component = "sensor";
+        _mqttEntities.etatChaudiere.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "etatChaudiere"}), 0, true);
+        _mqttEntities.etatChaudiere.set("icon", "mdi:tune-variant");
+        mqtt().registerEntity(*device, _mqttEntities.etatChaudiere, true);
+    }
 }
 
 void Satellite::loop() {
     
     static bool firstLoop = true;
-    if(firstLoop) {
-        firstLoop = _modeVirtuel;
+    if(firstLoop && !_modeVirtuel) {
+        firstLoop = false;
         publishMqtt();
         _zone.publishMqtt();
     }
@@ -70,6 +72,7 @@ void Satellite::loop() {
     if(firstLoop) {
         recupererInfosChaudiere();
         publishMqtt();
+        _zone.publishMqtt();
         firstLoop = false;
     }
 
@@ -80,6 +83,7 @@ void Satellite::loop() {
             incrementIdMessage(3);
             _lastEnvoiConsigne = now;
             _zone.publishMqtt();
+            publishMqtt();
         } else {
             error("[SATELLITE Z%d] Echec de l'envoi.", getNumeroZone());
             _lastEnvoiConsigne = now <= 60000 ? 1 : now - 60000;
@@ -89,7 +93,9 @@ void Satellite::loop() {
 
 void Satellite::publishMqtt() {
     mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("modeEcrasement" + String(getNumeroZone())), getEcrasement() ? "ON" : "OFF");
-    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("etatChaudiere"), _etatChaudiere.getLibelle().c_str());
+    if(this->getId() == ID_ZONE_1) { // Seulement sur Z1 (leader)
+        mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("etatChaudiere"), _etatChaudiere.getLibelle().c_str());
+    }
 }
 
 bool Satellite::recupererInfosChaudiere() {
@@ -123,7 +129,7 @@ bool Satellite::recupererInfosChaudiere() {
     } donneesZones;
 
     size_t length = 0;
-    uint16_t err;
+    int16_t err;
 
     info("[Satellite %d] Récupération des informations chaudière.", _zone.getNumeroZone());
     
@@ -200,7 +206,7 @@ bool Satellite::envoyerTemperatureAmbiante() {
     payload.temperatureAmbiante = _zone.getTemperatureAmbiante();
 
     size_t length = 0;
-    uint16_t err;
+    int16_t err;
 
     info("[Satellite %d] Envoi de la température ambiante %0.2f", _zone.getNumeroZone(), payload.temperatureAmbiante.toFloat());
     
@@ -325,7 +331,7 @@ bool Satellite::envoyerConsigne() {
     } 
     
     size_t length = 0;
-    uint16_t err;
+    int16_t err;
 
     info("[Satellite %d] Envoi de la consigne %0.2f, amb %0.2f, mode %s %d.", _zone.getNumeroZone(), payload.temperatureConsigne.toFloat(), _zone.getTemperatureAmbiante(), _zone.getNomMode(), payload.mode);
     
@@ -386,7 +392,7 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                 //info("[SATELLITE Z%d] Interception envoi consigne.", getNumeroZone());
 
                 uint8_t retry = 0;
-                uint16_t err;
+                int16_t err;
                 
                 size_t lengthRx = 0;
                 byte buffZones[RADIOLIB_SX126X_MAX_PACKET_LENGTH];

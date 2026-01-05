@@ -34,6 +34,7 @@ private:
   void handleLogsPage();         // GET /logs
   void handleClearLogs();        // GET /logs/clear
   void handleMemoryRead();       // GET /api/memory
+  void handleMemoryScan();       // GET /api/memory/scan
   void handleMemoryPage();       // GET /memory
   void handleStatus();
   void handleRadioLogsPage();

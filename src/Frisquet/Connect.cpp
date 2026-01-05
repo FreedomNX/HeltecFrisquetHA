@@ -82,7 +82,7 @@ bool Connect::envoyerZone(Zone& zone) {
     
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
     size_t length = 0;
-    uint16_t err;
+    int16_t err;
 
     uint8_t retry = 0;
     do {
@@ -148,7 +148,7 @@ bool Connect::recupererTemperatures() {
     } buff;
 
     size_t length;
-    uint16_t err;
+    int16_t err;
 
     uint8_t retry = 0;
     do {
@@ -214,7 +214,7 @@ bool Connect::recupererConsommation() {
     
 
     size_t length;
-    uint16_t err;
+    int16_t err;
 
     uint8_t retry = 0;
     do {
@@ -301,7 +301,7 @@ bool Connect::recupererModeECS() {
     
 
     size_t length = 0;
-    uint16_t err;
+    int16_t err;
 
     uint8_t retry = 0;
     do {
@@ -397,7 +397,7 @@ bool Connect::envoyerModeECS() {
     
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
     size_t length = 0;
-    uint16_t err;
+    int16_t err;
 
     uint8_t retry = 0;
     do {
@@ -488,7 +488,7 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             getZone(header.idExpediteur).publishMqtt();
 
             uint8_t retry = 0;
-            uint16_t err;
+            int16_t err;
             
             info("[CONNECT] Envoi accusé de réception");
 

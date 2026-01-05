@@ -51,7 +51,7 @@ bool SondeExterieure::envoyerTemperatureExterieure() {
     } donnees;
 
     size_t length;
-    uint16_t err;
+    int16_t err;
     
     uint8_t retry = 0;
     do {

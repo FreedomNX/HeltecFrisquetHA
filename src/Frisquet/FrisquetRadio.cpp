@@ -5,7 +5,7 @@
 bool FrisquetRadio::receivedFlag = false;
 bool FrisquetRadio::interruptReceive = false;
 
-uint16_t FrisquetRadio::sendAsk(
+int16_t FrisquetRadio::sendAsk(
     uint8_t idExpediteur, 
     uint8_t idDestinataire, 
     uint8_t idAssociation, 
@@ -37,7 +37,7 @@ uint16_t FrisquetRadio::sendAsk(
     
     interruptReceive = true;
     uint8_t attempts = retry;
-    uint16_t err;
+    int16_t err;
     do {
         delay(30);
         logRadio(false, (byte*)payload, sizeof(payload));
@@ -47,7 +47,7 @@ uint16_t FrisquetRadio::sendAsk(
         }
 
         err = this->receiveExpected(idDestinataire, idExpediteur, idAssociation, idMessage, idReception|0x80, FrisquetRadio::MessageType::READ, donneesReception, length, retry);
-        if(err == RADIOLIB_ERR_NONE) {
+        if(err == RADIOLIB_ERR_NONE || err == RADIOLIB_ERR_ADDRESS_NOT_FOUND) {
             break;
         }
     } while (--attempts > 0);
@@ -57,7 +57,7 @@ uint16_t FrisquetRadio::sendAsk(
     return err;
 }
 
-uint16_t FrisquetRadio::sendInit(
+int16_t FrisquetRadio::sendInit(
     uint8_t idExpediteur, 
     uint8_t idDestinataire, 
     uint8_t idAssociation, 
@@ -96,7 +96,7 @@ uint16_t FrisquetRadio::sendInit(
 
     interruptReceive = true;
     uint8_t retry = 0;
-    uint16_t err;
+    int16_t err;
 
     do {
         logRadio(false, (byte*)payload, sizeof(payload));
@@ -117,7 +117,7 @@ uint16_t FrisquetRadio::sendInit(
     return err;
 }
 
-uint16_t FrisquetRadio::sendAnswer(
+int16_t FrisquetRadio::sendAnswer(
     uint8_t idExpediteur, 
     uint8_t idDestinataire, 
     uint8_t idAssociation, 
@@ -145,7 +145,7 @@ uint16_t FrisquetRadio::sendAnswer(
 
     interruptReceive = true;
     uint8_t retry = 0;
-    uint16_t err;
+    int16_t err;
     do {
         delay(30);
         logRadio(false, (byte*)payload, writeBuffer.getLength());
@@ -163,7 +163,7 @@ uint16_t FrisquetRadio::sendAnswer(
     return err;
 }
 
-uint16_t FrisquetRadio::receiveExpected(
+int16_t FrisquetRadio::receiveExpected(
     uint8_t idExpediteur, 
     uint8_t idDestinataire, 
     uint8_t idAssociation, 
@@ -178,7 +178,7 @@ uint16_t FrisquetRadio::receiveExpected(
     interruptReceive = true;
 
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
-    uint16_t err;
+    int16_t err;
     RadioTrameHeader radioTrameHeader;
 
     do {
@@ -213,6 +213,10 @@ uint16_t FrisquetRadio::receiveExpected(
             memcpy(donnees, buff, length);
             break;
         } else {
+            if(radioTrameHeader.type != type && radioTrameHeader.type == 0x83) {
+                err = RADIOLIB_ERR_ADDRESS_NOT_FOUND;
+                break;
+            }
             err = RADIOLIB_ERR_RX_TIMEOUT;
         }
     } while (--retry > 0);

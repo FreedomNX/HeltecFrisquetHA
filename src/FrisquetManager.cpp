@@ -141,7 +141,7 @@ void FrisquetManager::onRadioReceive()
 
     byte buff[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
     size_t length = 0;
-    uint16_t err = _radio.readData(buff, 0);
+    int16_t err = _radio.readData(buff, 0);
 
     if (err != RADIOLIB_ERR_NONE)
     {
