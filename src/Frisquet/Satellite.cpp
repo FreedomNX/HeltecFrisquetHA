@@ -92,7 +92,7 @@ void Satellite::loop() {
 }
 
 void Satellite::publishMqtt() {
-    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("modeEcrasement" + String(getNumeroZone())), getEcrasement() ? "ON" : "OFF");
+    mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("ecrasementConsigneZ" + String(getNumeroZone())), getEcrasement() ? "ON" : "OFF");
     if(this->getId() == ID_ZONE_1) { // Seulement sur Z1 (leader)
         mqtt().publishState(*mqtt().getDevice("heltecFrisquet")->getEntity("etatChaudiere"), _etatChaudiere.getLibelle().c_str());
     }
