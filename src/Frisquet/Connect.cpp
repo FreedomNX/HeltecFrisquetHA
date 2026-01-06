@@ -159,7 +159,7 @@ bool Connect::recupererTemperatures() {
             this->getIdAssociation(),
             this->incrementIdMessage(),
             0x01,
-            0x79E0,
+            0x79E0 + (ID_CHAUDIERE == 0x84 ? 0xC8 : 0x00),
             0x001C,
             (byte*)&buff,
             length
@@ -225,7 +225,7 @@ bool Connect::recupererConsommation() {
             this->getIdAssociation(),
             this->incrementIdMessage(),
             0x01,
-            0x7A18,
+            0x7A18 + (ID_CHAUDIERE == 0x84 ? 0xC8 : 0x00),
             0x001C,
             (byte*)&buff,
             length
