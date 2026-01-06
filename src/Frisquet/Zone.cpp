@@ -57,8 +57,9 @@ void Zone::begin() {
     _mqttEntities.mode.setRaw("options", R"(["Hors Gel", "Réduit","Confort", "Auto", "Boost"])");
     mqtt().registerEntity(*device, _mqttEntities.mode, true);
     mqtt().onCommand(_mqttEntities.mode, [&](const String& payload){
-        setMode(payload);
-        if(getSource() == SOURCE::SATELLITE_VIRTUEL) {
+        setMode(payload, true);
+        info("[ZONE Z%d] Changement du mode : %d %s.", getNumeroZone(), getMode(), getNomMode());
+        //if(getSource() == SOURCE::SATELLITE_VIRTUEL) {
             if(confortActif()) {
                 setTemperatureConsigne(getTemperatureConfort());
             } else if(reduitActif()) {
@@ -66,13 +67,12 @@ void Zone::begin() {
             } else if(horsGelActif()) {
                 setTemperatureConsigne(getTemperatureHorsGel());
             }
+        //}
 
-            info("[ZONE Z%d] Changement du mode : %d %s.", getNumeroZone(), getMode(), getNomMode());
-            mqtt().publishState(_mqttEntities.temperatureConsigne, getTemperatureConsigne());
-            mqtt().publishState(_mqttEntities.mode, getNomMode());
-            refreshLastChange();
-            saveConfig();
-        }
+        mqtt().publishState(_mqttEntities.temperatureConsigne, getTemperatureConsigne());
+        mqtt().publishState(_mqttEntities.mode, getNomMode());
+        refreshLastChange();
+        saveConfig();
     });
 
     // SENSOR: Température ambiante

@@ -454,10 +454,10 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
 
                 setIdAssociation(header->idAssociation);
                 setIdMessage(header->idMessage);
-                setMode((MODE)donneesSatellite->mode);
                 _zone.setTemperatureAmbiante(donneesSatellite->temperatureAmbiante.toFloat());
                 
                 if(! getEcrasement()) {
+                    setMode((MODE)donneesSatellite->mode);
                     _zone.setTemperatureConsigne(donneesSatellite->temperatureConsigne.toFloat());
                     saveConfig();
                     _zone.saveConfig();
@@ -466,6 +466,9 @@ bool Satellite::onReceive(byte* donnees, size_t length) {
                     return true;
                 }
 
+                if(getMode() == MODE::INCONNU) {
+                    setMode((MODE)donneesSatellite->mode);
+                }
                 if(isnan(_zone.getTemperatureConsigne())) {
                     _zone.setTemperatureConsigne(donneesSatellite->temperatureConsigne.toFloat());
                 }
