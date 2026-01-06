@@ -469,23 +469,30 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             if(readBuffer.remainingLength() < sizeof(donneesZone)) { return false; }
             readBuffer.getBytes((byte*)&donneesZone, sizeof(donneesZone));
 
-            if(getZone(header.idExpediteur).getNumeroZone() == 0) {
-                error("[CONNECT] Impossible de mettre à jour la zone %d, numéro de zone invalide.", header.idExpediteur);
+            // Le champ `idReception` peut contenir le bit 0x80 (ACK). Masque-le
+            // pour obtenir l'ID de zone réel avant d'indexer les zones.
+            uint8_t zoneId = header.idReception & 0x7F;
+
+            info("[CONNECT] Trame A154: idExpediteur=%d idReception(raw)=%d idReception(masked)=%d", header.idExpediteur, header.idReception, zoneId);
+
+            if(getZone(zoneId).getNumeroZone() == 0) {
+                error("[CONNECT] Impossible de mettre à jour la zone %d, numéro de zone invalide.", zoneId);
                 return false;
             }
-            
-            getZone(header.idExpediteur).setMode((Zone::MODE_ZONE)donneesZone.mode);
-            getZone(header.idExpediteur).setModeOptions(donneesZone.modeOptions);
-            getZone(header.idExpediteur).setTemperatureReduit(donneesZone.temperatureReduit.toFloat());
-            getZone(header.idExpediteur).setTemperatureHorsGel(donneesZone.temperatureHorsGel.toFloat());
-            if(getZone(header.idExpediteur).boostActif()) {
-                //getZone(header.idExpediteur).setTemperatureBoost(donneesZone.temperatureConfort.toFloat());
+
+            getZone(zoneId).setMode((Zone::MODE_ZONE)donneesZone.mode);
+            getZone(zoneId).setModeOptions(donneesZone.modeOptions);
+            getZone(zoneId).setTemperatureReduit(donneesZone.temperatureReduit.toFloat());
+            getZone(zoneId).setTemperatureHorsGel(donneesZone.temperatureHorsGel.toFloat());
+            if(getZone(zoneId).boostActif()) {
+                //getZone(zoneId).setTemperatureBoost(donneesZone.temperatureConfort.toFloat());
             } else {
-                getZone(header.idExpediteur).setTemperatureConfort(donneesZone.temperatureConfort.toFloat());
+                getZone(zoneId).setTemperatureConfort(donneesZone.temperatureConfort.toFloat());
             }
 
             saveConfig();
-            getZone(header.idExpediteur).publishMqtt();
+            info("[CONNECT] Mise à jour zone %d (id %d), publication MQTT locale.", getZone(zoneId).getNumeroZone(), zoneId );
+            getZone(zoneId).publishMqtt();
 
             uint8_t retry = 0;
             int16_t err;
@@ -659,8 +666,8 @@ void Connect::envoiZone() {
                 _envoiZ1 = false;
             }
         }
-        if(getZone1().getSource() == Zone::SOURCE::CONNECT && _zone2.getLastChange() > _zone3.getLastEnvoi()) {
-            info("[CONNECT] Envoi de la zone 2.");
+        if(getZone2().getSource() == Zone::SOURCE::CONNECT && _zone2.getLastChange() > _zone2.getLastEnvoi()) {
+            info("[CONNECT] Envoi de la zone 2 (id=%d numero=%d).", _zone2.getIdZone(), _zone2.getNumeroZone());
             if(envoyerZone(_zone2)) {
                 info("[CONNECT] Envoi réussi !");
                 _zone2.publishMqtt();
@@ -668,8 +675,8 @@ void Connect::envoiZone() {
                 _envoiZ2 = false;
             }
         }
-        if(getZone1().getSource() == Zone::SOURCE::CONNECT && _zone3.getLastChange() > _zone3.getLastEnvoi()) {
-            info("[CONNECT] Envoi de la zone 3.");
+        if(getZone3().getSource() == Zone::SOURCE::CONNECT && _zone3.getLastChange() > _zone3.getLastEnvoi()) {
+            info("[CONNECT] Envoi de la zone 3 (id=%d numero=%d).", _zone3.getIdZone(), _zone3.getNumeroZone());
             if(envoyerZone(_zone3)) {
                 info("[CONNECT] Envoi réussi !");
                 _zone3.publishMqtt();
