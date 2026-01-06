@@ -20,7 +20,7 @@ class Connect : public FrisquetDevice {
         void loop();
 
          enum MODE_ECS : uint8_t {
-                    INCONNU = 0XFF,
+            INCONNU = 0XFF,
             STOP = 0x29,
             MAX = 0x01,
             ECO = 0x09,

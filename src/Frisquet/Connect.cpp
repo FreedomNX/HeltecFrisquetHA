@@ -323,7 +323,10 @@ bool Connect::recupererModeECS() {
             continue;
         }
         
-        setModeECS((MODE_ECS)buff.modeECS);
+        uint8_t raw = buff.modeECS;
+        uint8_t masked = raw & 0x7F;
+        info("[CONNECT] modeECS reçu brut=0x%02X, masqué=0x%02X", raw, masked);
+        setModeECS((MODE_ECS)masked);
 
         return true;
     } while(retry++ < 1);
@@ -448,7 +451,7 @@ bool Connect::onReceive(byte* donnees, size_t length) {
         readBuffer.getBytes((byte*)&requete, sizeof(requete));
 
         if(requete.adresseMemoireEcriture.toUInt16() == 0xA154 && requete.tailleMemoireEcriture.toUInt16() == 0x0018) { // Modification Zone
-            info("[CONNECT] Récéption trame Zone");
+            info("[CONNECT] Réception trame Zone (idExpediteur=%d idReception(raw)=%d)", header.idExpediteur, header.idReception);
 
             struct {
                 temperature8 temperatureConfort;    // Début 5°C -> 0 = 50 = 5°C - MAX 30°C
@@ -472,9 +475,7 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             // Le champ `idReception` peut contenir le bit 0x80 (ACK). Masque-le
             // pour obtenir l'ID de zone réel avant d'indexer les zones.
             uint8_t zoneId = header.idReception & 0x7F;
-
-            info("[CONNECT] Trame A154: idExpediteur=%d idReception(raw)=%d idReception(masked)=%d", header.idExpediteur, header.idReception, zoneId);
-
+            
             if(getZone(zoneId).getNumeroZone() == 0) {
                 error("[CONNECT] Impossible de mettre à jour la zone %d, numéro de zone invalide.", zoneId);
                 return false;
