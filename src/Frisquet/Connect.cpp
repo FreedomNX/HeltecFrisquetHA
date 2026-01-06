@@ -620,6 +620,9 @@ void Connect::loop() {
             if(recupererTemperatures()) {
                 _lastRecuperationTemperatures = now;
                 publishMqtt();
+                _zone1.publishMqtt();
+                _zone2.publishMqtt();
+                _zone3.publishMqtt();
             } else {
                 _lastRecuperationTemperatures = now <= 60000 ? 1 : now - 60000;
                 error("[CONNECT] Échec de la récupération des températures.");
