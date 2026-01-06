@@ -22,6 +22,9 @@ class Config {
         bool _useSatelliteVirtualZ1 = false;
         bool _useSatelliteVirtualZ2 = false;
         bool _useSatelliteVirtualZ3 = false;
+        bool _useZone1 = true;
+        bool _useZone2 = false;
+        bool _useZone3 = false;
     public:
         Config();
         void load();
@@ -50,4 +53,10 @@ class Config {
         void useSatelliteVirtualZ2(bool useSatelliteVirtualZ2) { _useSatelliteVirtualZ2 = useSatelliteVirtualZ2; }
         bool useSatelliteVirtualZ3() { return _useSatelliteVirtualZ3; };
         void useSatelliteVirtualZ3(bool useSatelliteVirtualZ3) { _useSatelliteVirtualZ3 = useSatelliteVirtualZ3; }
+        bool useZone1() { return _useZone1; }
+        bool useZone1(bool useZone1) { _useZone1 = useZone1; return _useZone1; }
+        bool useZone2() { return _useZone2; }
+        bool useZone2(bool useZone2) { _useZone2 = useZone2; return _useZone2; }
+        bool useZone3() { return _useZone3; }
+        bool useZone3(bool useZone3) { _useZone3 = useZone3; return _useZone3; }
 };

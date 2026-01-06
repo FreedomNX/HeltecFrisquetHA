@@ -17,7 +17,7 @@ class FrisquetRadio : public Radio {
         byte idExpediteur = 0x00;
         byte idAssociation = 0x00;
         byte idMessage = 0x00;
-        byte idReception = 0x01; //0x01 => Si message direct, sinon id destinataire finale (exemple envoi au satellite Z1 via chaudière) + 0x80 si accusé récéption
+        byte idReception = 0x01; //0x01 => Si message direct, sinon id destinataire finale (exemple envoi au satellite Z1 via chaudière) + 0x80 si accusé réception
         byte type = 0x00;
 
         void answer(RadioTrameHeader& radioTrameHeader) {
