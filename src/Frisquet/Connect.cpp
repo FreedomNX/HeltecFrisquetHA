@@ -471,8 +471,7 @@ bool Connect::onReceive(byte* donnees, size_t length) {
             if(readBuffer.remainingLength() < sizeof(donneesZone)) { return false; }
             readBuffer.getBytes((byte*)&donneesZone, sizeof(donneesZone));
 
-            // Le champ `idReception` peut contenir le bit 0x80 (ACK). Masque-le
-            // pour obtenir l'ID de zone réel avant d'indexer les zones.
+            // Le champ `idReception` peut contenir le bit 0x80 (ACK) : Ajout d'un masque
             uint8_t zoneId = header.idReception & 0x7F;
             
             if(getZone(zoneId).getNumeroZone() == 0) {
@@ -490,7 +489,8 @@ bool Connect::onReceive(byte* donnees, size_t length) {
                 getZone(zoneId).setTemperatureConfort(donneesZone.temperatureConfort.toFloat());
             }
 
-            saveConfig();
+            //Sauvegarde de la conf de la zone en NVs
+            getZone(zoneId).saveConfig();
             info("[CONNECT] Mise à jour zone %d (id %d), publication MQTT locale.", getZone(zoneId).getNumeroZone(), zoneId );
             getZone(zoneId).publishMqtt();
 
