@@ -14,39 +14,36 @@ void FrisquetManager::begin()
 
     initMqtt();
 
-    if(_cfg.useSatelliteVirtualZ1()) {
-        _zone1.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
-    } else if(_cfg.useConnect()) {
-        _zone1.setSource(Zone::SOURCE::CONNECT);
-    } else {
-        _zone1.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
-    }
     if (_cfg.useZone1()) {
+        if(_cfg.useSatelliteVirtualZ1()) {
+            _zone1.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+        } else if(_cfg.useConnect()) {
+            _zone1.setSource(Zone::SOURCE::CONNECT);
+        } else {
+            _zone1.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+        }
         _zone1.begin();
     }
     
-    if(_cfg.useSatelliteVirtualZ2()) {
-        _zone2.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
-    } else if(_cfg.useConnect()) {
-        _zone2.setSource(Zone::SOURCE::CONNECT);
-    } else {
-        _zone2.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
-    }
-    // Enregistrer la zone 2 si l'utilisateur a déclaré qu'elle est présente.
-    // (Les satellites restent gérés séparément par useSatelliteZ2/useSatelliteVirtualZ2)
     if (_cfg.useZone2()) {
+        if(_cfg.useSatelliteVirtualZ2()) {
+            _zone2.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+        } else if(_cfg.useConnect()) {
+            _zone2.setSource(Zone::SOURCE::CONNECT);
+        } else {
+            _zone2.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+        }
         _zone2.begin();
     }
 
-    if(_cfg.useSatelliteVirtualZ3()) {
-        _zone3.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
-    } else if(_cfg.useConnect()) {
-        _zone3.setSource(Zone::SOURCE::CONNECT);
-    } else {
-        _zone3.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
-    }
-    // Enregistrer la zone 3 si l'utilisateur a déclaré qu'elle est présente.
     if (_cfg.useZone3()) {
+        if(_cfg.useSatelliteVirtualZ3()) {
+            _zone3.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+        } else if(_cfg.useConnect()) {
+            _zone3.setSource(Zone::SOURCE::CONNECT);
+        } else {
+            _zone3.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+        }
         _zone3.begin();
     }
 
