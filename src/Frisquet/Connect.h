@@ -84,7 +84,7 @@ class Connect : public FrisquetDevice {
         void setConsommationECS(int16_t consommation);
         void setConsommationChauffage(int16_t consommation);
 
-        void envoiZone();
+        void envoiZones();
 
         bool _envoiZ1 = false;
         bool _envoiZ2 = false;

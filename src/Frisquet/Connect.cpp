@@ -191,7 +191,6 @@ bool Connect::recupererTemperatures() {
         setTemperatureExterieure(buff.temperatureExterieure.toFloat());
         setTemperatureECS(buff.temperatureECS.toFloat());
         setTemperatureCDC(buff.temperatureCDC.toFloat());
-        
         return true;
     } while(retry++ < 1);
 
@@ -654,14 +653,14 @@ void Connect::loop() {
         }
 
         if (now - _lastEnvoiZone >= 30000 || _lastEnvoiZone == 0) { // 30 secondes
-            envoiZone();
+            envoiZones();
         }
     }
 }
 
-void Connect::envoiZone() {
+void Connect::envoiZones() {
     if(estAssocie()) {
-        if(getZone1().getSource() == Zone::SOURCE::CONNECT && _zone1.getLastChange() > _zone1.getLastEnvoi()) {
+        if(getConfig().useZone1() && getZone1().getSource() == Zone::SOURCE::CONNECT && _zone1.getLastChange() > _zone1.getLastEnvoi()) {
             info("[CONNECT] Envoi de la zone 1.");
             if(envoyerZone(_zone1)) {
                 info("[CONNECT] Envoi réussi !");
@@ -670,7 +669,7 @@ void Connect::envoiZone() {
                 _envoiZ1 = false;
             }
         }
-        if(getZone2().getSource() == Zone::SOURCE::CONNECT && _zone2.getLastChange() > _zone2.getLastEnvoi()) {
+        if(getConfig().useZone2() && getZone2().getSource() == Zone::SOURCE::CONNECT && _zone2.getLastChange() > _zone2.getLastEnvoi()) {
             info("[CONNECT] Envoi de la zone 2 (id=%d numero=%d).", _zone2.getIdZone(), _zone2.getNumeroZone());
             if(envoyerZone(_zone2)) {
                 info("[CONNECT] Envoi réussi !");
@@ -679,7 +678,7 @@ void Connect::envoiZone() {
                 _envoiZ2 = false;
             }
         }
-        if(getZone3().getSource() == Zone::SOURCE::CONNECT && _zone3.getLastChange() > _zone3.getLastEnvoi()) {
+        if(getConfig().useZone3() && getZone3().getSource() == Zone::SOURCE::CONNECT && _zone3.getLastChange() > _zone3.getLastEnvoi()) {
             info("[CONNECT] Envoi de la zone 3 (id=%d numero=%d).", _zone3.getIdZone(), _zone3.getNumeroZone());
             if(envoyerZone(_zone3)) {
                 info("[CONNECT] Envoi réussi !");
