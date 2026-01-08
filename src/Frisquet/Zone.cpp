@@ -6,7 +6,7 @@ void Zone::loadConfig() {
 
     _preferences.begin("zoneCfg" + getNumeroZone(), false);
 
-    setMode((Zone::MODE_ZONE)_preferences.getUChar("mode"));
+    setMode((Zone::MODE_ZONE)_preferences.getUChar("mode", (uint8_t)Zone::MODE_ZONE::INCONNU));
     setModeOptions(_preferences.getUChar("modeOpts"));
     setTemperatureConfort(_preferences.getFloat("tempConfort"));
     setTemperatureReduit(_preferences.getFloat("tempReduit"));

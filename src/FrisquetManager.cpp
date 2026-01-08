@@ -14,32 +14,38 @@ void FrisquetManager::begin()
 
     initMqtt();
 
-    if(_cfg.useSatelliteVirtualZ1()) {
-        _zone1.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
-    } else if(_cfg.useConnect()) {
-        _zone1.setSource(Zone::SOURCE::CONNECT);
-    } else {
-        _zone1.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+    if (_cfg.useZone1()) {
+        if(_cfg.useSatelliteVirtualZ1()) {
+            _zone1.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+        } else if(_cfg.useConnect()) {
+            _zone1.setSource(Zone::SOURCE::CONNECT);
+        } else {
+            _zone1.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+        }
+        _zone1.begin();
     }
-    _zone1.begin();
     
-    if(_cfg.useSatelliteVirtualZ2()) {
-        _zone2.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
-    } else if(_cfg.useConnect()) {
-        _zone2.setSource(Zone::SOURCE::CONNECT);
-    } else {
-        _zone2.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+    if (_cfg.useZone2()) {
+        if(_cfg.useSatelliteVirtualZ2()) {
+            _zone2.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+        } else if(_cfg.useConnect()) {
+            _zone2.setSource(Zone::SOURCE::CONNECT);
+        } else {
+            _zone2.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+        }
+        _zone2.begin();
     }
-    _zone2.begin();
 
-    if(_cfg.useSatelliteVirtualZ3()) {
-        _zone3.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
-    } else if(_cfg.useConnect()) {
-        _zone3.setSource(Zone::SOURCE::CONNECT);
-    } else {
-        _zone3.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+    if (_cfg.useZone3()) {
+        if(_cfg.useSatelliteVirtualZ3()) {
+            _zone3.setSource(Zone::SOURCE::SATELLITE_VIRTUEL);
+        } else if(_cfg.useConnect()) {
+            _zone3.setSource(Zone::SOURCE::CONNECT);
+        } else {
+            _zone3.setSource(Zone::SOURCE::SATELLITE_PHYSIQUE);
+        }
+        _zone3.begin();
     }
-    _zone3.begin();
 
     if (_cfg.useConnect()) {
         _connect.begin();
@@ -54,13 +60,13 @@ void FrisquetManager::begin()
             initDS18B20();
         }
     }
-    if (_cfg.useSatelliteZ1()) {
+    if (_cfg.useZone1() && _cfg.useSatelliteZ1()) {
         _satelliteZ1.begin(_cfg.useSatelliteVirtualZ1());
     }
-    if (_cfg.useSatelliteZ2()) {
+    if (_cfg.useZone2() && _cfg.useSatelliteZ2()) {
         _satelliteZ2.begin(_cfg.useSatelliteVirtualZ2());
     }
-    if (_cfg.useSatelliteZ3()) {
+    if (_cfg.useZone3() && _cfg.useSatelliteZ3()) {
         _satelliteZ3.begin(_cfg.useSatelliteVirtualZ3());
     }
 
@@ -78,7 +84,7 @@ void FrisquetManager::loop()
 {
     uint32_t now = millis();
 
-    if (FrisquetRadio::receivedFlag) { // Récéption données radio
+    if (FrisquetRadio::receivedFlag) { // Réception données radio
         onRadioReceive();
     }
 
@@ -92,6 +98,12 @@ void FrisquetManager::loop()
     
     if (_cfg.useSatelliteZ1()) {
         _satelliteZ1.loop();
+    }
+    if (_cfg.useSatelliteZ2()) {
+        _satelliteZ2.loop();
+    }
+    if (_cfg.useSatelliteZ3()) {
+        _satelliteZ3.loop();
     }
 }
 

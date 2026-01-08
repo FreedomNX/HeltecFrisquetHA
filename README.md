@@ -102,6 +102,9 @@ Avant le flash :
 
 #### 🔹 Module Connect
 1. Sur la chaudière : **lancer l’association Connect**  
+  a. Accédez au menu de configuration
+  b. aller dans "partenaire" puis sur "Ajouter"
+  c. Lancez l'association Frisquet Connect. Appuyez sur OK jusqu’à ce que l’écran demande d’associer la Frisquet Connect.
 2. Sur le portail ou Home Assistant : activer le bouton **“Associer Connect”**
 3. Une fois reconnu, la chaudière commencera à envoyer les données vers le module
 

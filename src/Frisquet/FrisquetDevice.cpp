@@ -34,7 +34,7 @@ bool FrisquetDevice::associer(NetworkID& networkId, uint8_t& idAssociation) {
         readBuffer.getBytes((byte*)&donnees, sizeof(donnees));
 
         if(donnees.header.idExpediteur == ID_CHAUDIERE && donnees.header.type == FrisquetRadio::MessageType::ASSOCIATION) {
-            info("[DEVICE] Récéption trame d'association");
+            info("[DEVICE] Réception trame d'association");
 
             struct {
                 FrisquetRadio::RadioTrameHeader header;

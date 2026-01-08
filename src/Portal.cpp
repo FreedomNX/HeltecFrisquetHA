@@ -199,6 +199,13 @@ void Portal::handleGetConfig() {
           String(_frisquetManager.config().useSondeExterieure() ? "true" : "false") + ",";
   json += "\"useDS18B20\":" +
           String(_frisquetManager.config().useDS18B20() ? "true" : "false") + ",";
+    // Zones présentes
+    json += "\"useZone1\":" +
+      String(_frisquetManager.config().useZone1() ? "true" : "false") + ",";
+    json += "\"useZone2\":" +
+      String(_frisquetManager.config().useZone2() ? "true" : "false") + ",";
+    json += "\"useZone3\":" +
+      String(_frisquetManager.config().useZone3() ? "true" : "false") + ",";
    
   // Satellites physiques
   json += "\"useSatelliteZ1\":" +
@@ -271,6 +278,21 @@ void Portal::handlePostConfig() {
     bool v = parseBoolArg(_srv.arg("useDS18B20"), cur);
     _frisquetManager.config().useDS18B20(v);
   }
+    if (_srv.hasArg("useZone1")) {
+      bool cur = _frisquetManager.config().useZone1();
+      bool v = parseBoolArg(_srv.arg("useZone1"), cur);
+      _frisquetManager.config().useZone1(v);
+    }
+    if (_srv.hasArg("useZone2")) {
+      bool cur = _frisquetManager.config().useZone2();
+      bool v = parseBoolArg(_srv.arg("useZone2"), cur);
+      _frisquetManager.config().useZone2(v);
+    }
+    if (_srv.hasArg("useZone3")) {
+      bool cur = _frisquetManager.config().useZone3();
+      bool v = parseBoolArg(_srv.arg("useZone3"), cur);
+      _frisquetManager.config().useZone3(v);
+    }
 
   if (_srv.hasArg("useSatelliteZ1")) {
     bool cur = _frisquetManager.config().useSatelliteZ1();
@@ -1188,6 +1210,29 @@ String Portal::html() {
               </label>
               <div class='hint'>Active l'utilisation d'un capteur de température filaire.</div>
             </div>
+          </div>
+          <div class='grid-3' style='margin-top:8px'>
+            <div class='row'>
+              <label class='check-row'>
+                <input id='useZone1' type='checkbox'>
+                <span>Zone 1 présente</span>
+              </label>
+              <div class='hint'>Zone 1 physique présente.</div>
+            </div>
+            <div class='row'>
+              <label class='check-row'>
+                <input id='useZone2' type='checkbox'>
+                <span>Zone 2 présente</span>
+              </label>
+              <div class='hint'>Zone 2 physique présente.</div>
+            </div>
+            <div class='row'>
+              <label class='check-row'>
+                <input id='useZone3' type='checkbox'>
+                <span>Zone 3 présente</span>
+              </label>
+              <div class='hint'>Zone 3 physique présente.</div>
+            </div>
             <div class='row'>
               <button type='button' class='btn btn-sm' id='btnPairSondeExt' style='margin-top:6px;display:none'>
                 Associer la sonde extérieure
@@ -1326,6 +1371,7 @@ const FIELDS = [
   "mqttHost","mqttPort","mqttUser","mqttPass",
   "mqttClientId","mqttBaseTopic",
   "networkID","useConnect","useSondeExt","useDS18B20",
+  "useZone1","useZone2","useZone3",
   "useSatelliteZ1","useSatelliteZ2","useSatelliteZ3",
   "useSatelliteVirtualZ1","useSatelliteVirtualZ2","useSatelliteVirtualZ3"
 ];
@@ -1360,6 +1406,14 @@ function updatePairButtons() {
   if (chkZ3 && btnZ3) {
     btnZ3.style.display = chkZ3.checked ? "inline-flex" : "none";
   }
+
+  // Pair buttons visibility should also consider whether the corresponding zone is present
+  const chkZone1 = $("#useZone1");
+  const chkZone2 = $("#useZone2");
+  const chkZone3 = $("#useZone3");
+  if (btnZ1 && chkZone1) btnZ1.style.display = (chkZ1.checked && chkZone1.checked) ? "inline-flex" : "none";
+  if (btnZ2 && chkZone2) btnZ2.style.display = (chkZ2.checked && chkZone2.checked) ? "inline-flex" : "none";
+  if (btnZ3 && chkZone3) btnZ3.style.display = (chkZ3.checked && chkZone3.checked) ? "inline-flex" : "none";
 }
 
 
@@ -1565,12 +1619,18 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const chkZ1      = $("#useSatelliteZ1");
   const chkZ2      = $("#useSatelliteZ2");
   const chkZ3      = $("#useSatelliteZ3");
+  const chkZone1   = $("#useZone1");
+  const chkZone2   = $("#useZone2");
+  const chkZone3   = $("#useZone3");
 
   if (chkConnect) chkConnect.addEventListener("change", updatePairButtons);
   if (chkSonde)   chkSonde.addEventListener("change", updatePairButtons);
   if (chkZ1)      chkZ1.addEventListener("change", updatePairButtons);
   if (chkZ2)      chkZ2.addEventListener("change", updatePairButtons);
   if (chkZ3)      chkZ3.addEventListener("change", updatePairButtons);
+  if (chkZone1)   chkZone1.addEventListener("change", updatePairButtons);
+  if (chkZone2)   chkZone2.addEventListener("change", updatePairButtons);
+  if (chkZone3)   chkZone3.addEventListener("change", updatePairButtons);
 
   const btnPairConnect = $("#btnPairConnect");
   const btnPairSonde   = $("#btnPairSondeExt");
