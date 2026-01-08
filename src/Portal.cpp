@@ -1064,7 +1064,7 @@ String Portal::html() {
   .row{display:flex;flex-direction:column;gap:6px}
   label{font-weight:600}
   .hint{color:var(--muted);font-size:12px}
-  input[type=text],input[type=password],input[type=number]{
+  input[type=text],input[type=password],input[type=number],select{
     width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;
     background:#0d1016;color:var(--txt)
   }
@@ -1210,6 +1210,11 @@ String Portal::html() {
               </label>
               <div class='hint'>Active l'utilisation d'un capteur de température filaire.</div>
             </div>
+            <div class='row'>
+              <button type='button' class='btn btn-sm' id='btnPairSondeExt' style='margin-top:6px;display:none'>
+                Associer la sonde extérieure
+              </button>
+            </div>
           </div>
           <div class='grid-3' style='margin-top:8px'>
             <div class='row'>
@@ -1233,11 +1238,6 @@ String Portal::html() {
               </label>
               <div class='hint'>Zone 3 physique présente.</div>
             </div>
-            <div class='row'>
-              <button type='button' class='btn btn-sm' id='btnPairSondeExt' style='margin-top:6px;display:none'>
-                Associer la sonde extérieure
-              </button>
-            </div>
           </div>
 
           <hr />
@@ -1250,14 +1250,17 @@ String Portal::html() {
                 <input id='useSatelliteZ1' type='checkbox'>
                 <span>Satellite Z1</span>
               </label>
-              <div class='hint'>Active la gestion du satellite Z1.</div>
+              <div class='hint'>Activer la gestion et la récupération d'information du satellite Z1.</div>
 
-              <label class='check-row' style='margin-top:8px'>
-                <input id='useSatelliteVirtualZ1' type='checkbox'>
-                <span>Remplacer le satellite physique</span>
-              </label>
-              <div class='hint'>
-                Utilise ce module à la place d’un satellite Z1 réel (émulation).
+              <div class='row' style='margin-top:6px'>
+                <label>Type de satellite</label>
+                <select id='useSatelliteVirtualZ1'>
+                  <option value='false'>Physique</option>
+                  <option value='true'>Virtuel (émulation)</option>
+                </select>
+                <div class='hint'>
+                  Choisir le type de satellite à utiliser pour Z1.
+                </div>
               </div>
 
               <button type='button' class='btn btn-sm' id='btnPairSatZ1' style='margin-top:6px;display:none'>
@@ -1270,14 +1273,17 @@ String Portal::html() {
                 <input id='useSatelliteZ2' type='checkbox'>
                 <span>Satellite Z2</span>
               </label>
-              <div class='hint'>Active la gestion du satellite Z2.</div>
+              <div class='hint'>Activer la gestion et la récupération d'information du satellite Z2.</div>
 
-              <label class='check-row' style='margin-top:8px'>
-                <input id='useSatelliteVirtualZ2' type='checkbox'>
-                <span>Remplacer le satellite physique</span>
-              </label>
-              <div class='hint'>
-                Utilise ce module à la place d’un satellite Z2 réel (émulation).
+              <div class='row' style='margin-top:6px'>
+                <label>Type de satellite</label>
+                <select id='useSatelliteVirtualZ2'>
+                  <option value='false'>Physique</option>
+                  <option value='true'>Virtuel (émulation)</option>
+                </select>
+                <div class='hint'>
+                  Choisir le type de satellite à utiliser pour Z2.
+                </div>
               </div>
 
               <button type='button' class='btn btn-sm' id='btnPairSatZ2' style='margin-top:6px;display:none'>
@@ -1290,14 +1296,17 @@ String Portal::html() {
                 <input id='useSatelliteZ3' type='checkbox'>
                 <span>Satellite Z3</span>
               </label>
-              <div class='hint'>Active la gestion du satellite Z3.</div>
+              <div class='hint'>Activer la gestion et la récupération d'information du satellite Z3.</div>
 
-              <label class='check-row' style='margin-top:8px'>
-                <input id='useSatelliteVirtualZ3' type='checkbox'>
-                <span>Remplacer le satellite physique</span>
-              </label>
-              <div class='hint'>
-                Utilise ce module à la place d’un satellite Z3 réel (émulation).
+              <div class='row' style='margin-top:6px'>
+                <label>Type de satellite</label>
+                <select id='useSatelliteVirtualZ3'>
+                  <option value='false'>Physique</option>
+                  <option value='true'>Virtuel (émulation)</option>
+                </select>
+                <div class='hint'>
+                  Choisir le type de satellite à utiliser pour Z3.
+                </div>
               </div>
 
               <button type='button' class='btn btn-sm' id='btnPairSatZ3' style='margin-top:6px;display:none'>
