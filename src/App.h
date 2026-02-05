@@ -42,4 +42,9 @@ private:
   void initMqtt();
   void initPortal();
   void initOta();
+
+  // Écran OLED
+  void initDisplay();
+  void updateDisplay(bool force = false);
+  uint32_t _lastDisplayMs = 0;
 };
