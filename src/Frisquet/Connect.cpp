@@ -122,6 +122,16 @@ bool Connect::recupererInformations() {
     struct {
         FrisquetRadio::RadioTrameHeader header;
         uint8_t longueurDonnees;
+        temperature16 temperatureAmbianteZ1;
+        temperature16 temperatureAmbianteZ2;
+        temperature16 temperatureAmbianteZ3;
+        temperature16 temperatureConsigneDepartZ1;
+        temperature16 temperatureConsigneDepartZ2;
+        temperature16 temperatureConsigneDepartZ3;
+        temperature16 temperatureConsigneZ1;
+        temperature16 temperatureConsigneZ2;
+        temperature16 temperatureConsigneZ3;
+        temperature16 temperatureExterieure;
         temperature16 temperatureECS;
         temperature16 temperatureCDC;
         temperature16 temperatureDepartZ1;
@@ -133,20 +143,9 @@ bool Connect::recupererInformations() {
         temperature16 puissanceInstantaneeChauffage;
         temperature16 temperatureInconnue5;
         pression16 pression;
-        byte i1[1] = {0};
+        fword modeFonctionnement;
         byte modeECS;
         temperature16 temperatureECSInstant;
-        byte i2[10] = {0};
-        temperature16 temperatureAmbianteZ1;
-        temperature16 temperatureAmbianteZ2;
-        temperature16 temperatureAmbianteZ3;
-        temperature16 temperatureConsigneDepartZ1;
-        temperature16 temperatureConsigneDepartZ2;
-        temperature16 temperatureConsigneDepartZ3;
-        temperature16 temperatureConsigneZ1;
-        temperature16 temperatureConsigneZ2;
-        temperature16 temperatureConsigneZ3;
-        temperature16 temperatureExterieure;
     } buff;
 
     size_t length;
@@ -161,7 +160,7 @@ bool Connect::recupererInformations() {
             this->getIdAssociation(),
             this->incrementIdMessage(),
             0x01,
-            0x79E0 + (ID_CHAUDIERE == 0x84 ? 0xC8 : 0x00),
+            0x79F2 + (ID_CHAUDIERE == 0x84 ? 0xC8 : 0x00),
             0x001C,
             (byte*)&buff,
             length
@@ -202,6 +201,7 @@ bool Connect::recupererInformations() {
         _chaudiere.setTemperatureFumees(buff.temperatureFumees.toFloat()/2);
         _chaudiere.setPuissanceInstantaneeECS(buff.puissanceInstantaneeECS.toFloat());
         _chaudiere.setPuissanceInstantaneeChauffage(buff.puissanceInstantaneeChauffage.toFloat());
+        _chaudiere.setModeFonctionnement(buff.modeFonctionnement.toUInt16());
 
         setPression(buff.pression.toFloat());
         return true;
@@ -433,7 +433,7 @@ bool Connect::envoyerModeECS() {
 }
 
 bool Connect::handlePassiveReadResponse(uint16_t adresseMemoire, const byte* buff, size_t length) {
-    const uint16_t addrInformations = 0x79E0;
+    const uint16_t addrInformations = 0x79F2;
     const uint16_t addrConsommation = 0x7A18;
     const uint16_t addrDate = 0xA02B;
     const uint16_t addrModeEcs = 0xA0FC;
@@ -447,6 +447,16 @@ bool Connect::handlePassiveReadResponse(uint16_t adresseMemoire, const byte* buf
         struct {
             FrisquetRadio::RadioTrameHeader header;
             uint8_t longueurDonnees;
+            temperature16 temperatureAmbianteZ1;
+            temperature16 temperatureAmbianteZ2;
+            temperature16 temperatureAmbianteZ3;
+            temperature16 temperatureConsigneDepartZ1;
+            temperature16 temperatureConsigneDepartZ2;
+            temperature16 temperatureConsigneDepartZ3;
+            temperature16 temperatureConsigneZ1;
+            temperature16 temperatureConsigneZ2;
+            temperature16 temperatureConsigneZ3;
+            temperature16 temperatureExterieure;
             temperature16 temperatureECS;
             temperature16 temperatureCDC;
             temperature16 temperatureDepartZ1;
@@ -458,20 +468,9 @@ bool Connect::handlePassiveReadResponse(uint16_t adresseMemoire, const byte* buf
             temperature16 puissanceInstantaneeChauffage;
             temperature16 temperatureInconnue5;
             pression16 pression;
-            byte i1[1] = {0};
+            fword modeFonctionnement;
             byte modeECS;
             temperature16 temperatureECSInstant;
-            byte i2[10] = {0};
-            temperature16 temperatureAmbianteZ1;
-            temperature16 temperatureAmbianteZ2;
-            temperature16 temperatureAmbianteZ3;
-            temperature16 temperatureConsigneDepartZ1;
-            temperature16 temperatureConsigneDepartZ2;
-            temperature16 temperatureConsigneDepartZ3;
-            temperature16 temperatureConsigneZ1;
-            temperature16 temperatureConsigneZ2;
-            temperature16 temperatureConsigneZ3;
-            temperature16 temperatureExterieure;
         } resp;
 
         if (length < sizeof(resp)) {
@@ -508,6 +507,7 @@ bool Connect::handlePassiveReadResponse(uint16_t adresseMemoire, const byte* buf
         _chaudiere.setTemperatureFumees(resp.temperatureFumees.toFloat()/2);
         _chaudiere.setPuissanceInstantaneeECS(resp.puissanceInstantaneeECS.toFloat());
         _chaudiere.setPuissanceInstantaneeChauffage(resp.puissanceInstantaneeChauffage.toFloat());
+        _chaudiere.setModeFonctionnement(resp.modeFonctionnement.toUInt16());
         setPression(resp.pression.toFloat());
 
         _lastRecuperationTemperatures = millis();

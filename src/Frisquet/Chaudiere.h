@@ -54,6 +54,12 @@ public:
         ECOPLUS_HORAIRES = 0x20
     };
 
+    enum MODE_FONCTIONNEMENT : uint8_t {
+        FONCTIONNEMENT_INCONNU = 0xFF,
+        CHAUFFAGE_RADIATEURS = 0x05,
+        CHAUFFAGE_ECS = 0x07
+    };
+
     Chaudiere(MqttManager& mqtt, Config& cfg) : _mqtt(mqtt), _cfg(cfg) {}
 
     void begin(std::function<void(const String&)> modeEcsCommandCb = {});
@@ -84,6 +90,11 @@ public:
     MODE_ECS getModeECS() const { return _modeECS; }
     String getNomModeECS() const;
 
+    void setModeFonctionnement(uint16_t modeFonctionnement);
+    MODE_FONCTIONNEMENT getModeFonctionnement() const { return _modeFonctionnement; }
+    uint16_t getModeFonctionnementRaw() const { return _modeFonctionnementRaw; }
+    String getNomModeFonctionnement() const;
+
     void setPression(float pression);
     float getPression() const { return _pression; }
 
@@ -106,6 +117,8 @@ private:
     int16_t _consommationGazChauffage = -1;
 
     MODE_ECS _modeECS = MODE_ECS::INCONNU;
+    MODE_FONCTIONNEMENT _modeFonctionnement = MODE_FONCTIONNEMENT::FONCTIONNEMENT_INCONNU;
+    uint16_t _modeFonctionnementRaw = 0xFFFF;
 
     int16_t _lastPubConsommationECS = -1;
     int16_t _lastPubConsommationChauffage = -1;
@@ -113,6 +126,7 @@ private:
 
     struct {
         MqttEntity etatChaudiere;
+        MqttEntity modeFonctionnement;
         MqttEntity modeECS;
         MqttEntity tempECS;
         MqttEntity tempCDC;

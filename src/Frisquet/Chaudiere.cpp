@@ -14,6 +14,13 @@ void Chaudiere::begin(std::function<void(const String&)> modeEcsCommandCb) {
     _mqttEntities.etatChaudiere.set("icon", "mdi:tune-variant");
     _mqtt.registerEntity(*device, _mqttEntities.etatChaudiere, true);
 
+    _mqttEntities.modeFonctionnement.id = "modeFonctionnement";
+    _mqttEntities.modeFonctionnement.name = "Mode de fonctionnement";
+    _mqttEntities.modeFonctionnement.component = "sensor";
+    _mqttEntities.modeFonctionnement.stateTopic = MqttTopic(MqttManager::compose({device->baseTopic, "chaudiere", "modeFonctionnement"}), 0, true);
+    _mqttEntities.modeFonctionnement.set("icon", "mdi:hvac");
+    _mqtt.registerEntity(*device, _mqttEntities.modeFonctionnement, true);
+
     _mqttEntities.tempECS.id = "temperatureECS";
     _mqttEntities.tempECS.name = "Température ECS";
     _mqttEntities.tempECS.component = "sensor";
@@ -117,6 +124,7 @@ void Chaudiere::begin(std::function<void(const String&)> modeEcsCommandCb) {
 
 void Chaudiere::publishMqtt() {
     _mqtt.publishState(_mqttEntities.etatChaudiere, getEtatChaudiere().getLibelle().c_str());
+    _mqtt.publishState(_mqttEntities.modeFonctionnement, getNomModeFonctionnement());
 
     if (!isnan(getTemperatureECS())) {
         _mqtt.publishState(_mqttEntities.tempECS, getTemperatureECS());
@@ -165,6 +173,35 @@ void Chaudiere::publishModeEcs() {
 
 void Chaudiere::setTemperatureExterieure(float temperature) {
     _temperatureExterieure = temperature;
+}
+
+void Chaudiere::setModeFonctionnement(uint16_t modeFonctionnement) {
+    _modeFonctionnementRaw = modeFonctionnement;
+
+    switch (modeFonctionnement) {
+        case 0x0005:
+        case 0x0105:
+            _modeFonctionnement = MODE_FONCTIONNEMENT::CHAUFFAGE_RADIATEURS;
+            break;
+        case 0x0007:
+        case 0x0107:
+            _modeFonctionnement = MODE_FONCTIONNEMENT::CHAUFFAGE_ECS;
+            break;
+        default:
+            _modeFonctionnement = MODE_FONCTIONNEMENT::FONCTIONNEMENT_INCONNU;
+            break;
+    }
+}
+
+String Chaudiere::getNomModeFonctionnement() const {
+    switch (getModeFonctionnement()) {
+        case MODE_FONCTIONNEMENT::CHAUFFAGE_RADIATEURS:
+            return "Chauffage radiateurs";
+        case MODE_FONCTIONNEMENT::CHAUFFAGE_ECS:
+            return "Chauffage ECS";
+        default:
+            return "Inconnu";
+    }
 }
 
 void Chaudiere::setTemperatureECS(float temperature) {
