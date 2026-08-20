@@ -1,13 +1,13 @@
 #pragma once
 #include <heltec.h>
 #include <Preferences.h>
-#include "NetworkManager.h"
+#include "MyNetworkManager.h"
 #include "MQTT/MqttManager.h"
 #include "Frisquet/NetworkID.h"
 
 class Config {
     private:
-        NetworkManager::Options _wifiOpts;
+        MyNetworkManager::Options _wifiOpts;
         MqttManager::Options _mqttOpts;
         NetworkID _networkId;
 
@@ -31,7 +31,7 @@ class Config {
         void load();
         void save();
 
-        NetworkManager::Options& getWiFiOptions() { return _wifiOpts; }
+        MyNetworkManager::Options& getWiFiOptions() { return _wifiOpts; }
         MqttManager::Options& getMQTTOptions() { return _mqttOpts; }
         NetworkID& getNetworkID() { return _networkId; }
         void setNetworkID(NetworkID networkId) { _networkId = networkId; }
